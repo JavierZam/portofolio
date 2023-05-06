@@ -1,0 +1,23 @@
+{
+  "name": "portofolio",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JavierZam/portofolio.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JavierZam/portofolio/issues"
+  },
+  "homepage": "https://github.com/JavierZam/portofolio#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
