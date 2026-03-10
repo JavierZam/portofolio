@@ -63,6 +63,14 @@ export const PORTFOLIO = {
     subtitle: 'Where I\'ve been writing code and breaking things',
     items: [
       {
+        title: 'Software Developer',
+        company: 'PT Bisnis Adviz Solusi',
+        period: '2025 – Present',
+        description: 'Building backend APIs and full-stack web/mobile apps. Architecting deployment environments on GCP, designing databases (PostgreSQL, Firestore), establishing CI/CD pipelines (GitHub Actions, Cloud Build), and containerizing with Docker.',
+        tags: ['Golang', 'Node.js', 'React', 'GCP', 'Docker', 'CI/CD'],
+        type: 'work' as const,
+      },
+      {
         title: 'Backend, Frontend, DevOps & Cloud Engineer',
         company: 'Freelance',
         period: '2023 – Present',
