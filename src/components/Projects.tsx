@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { ExternalLink, Github, Star } from 'lucide-react'
+import Tilt from 'react-parallax-tilt'
 import { PORTFOLIO } from '../config/portfolio'
 
 const containerVariants = {
@@ -45,9 +46,20 @@ export default function Projects() {
               <motion.div
                 key={index}
                 variants={cardVariants}
-                className="glass rounded-2xl overflow-hidden group hover:glow-border transition-all"
+                className="h-full"
               >
-                {/* Image placeholder / gradient header */}
+                <Tilt
+                  tiltMaxAngleX={5}
+                  tiltMaxAngleY={5}
+                  scale={1.02}
+                  transitionSpeed={2500}
+                  glareEnable={true}
+                  glareMaxOpacity={0.15}
+                  glareColor="#ffffff"
+                  glarePosition="all"
+                  className="glass rounded-2xl overflow-hidden group hover:glow-border transition-all h-full flex flex-col"
+                >
+                  {/* Image placeholder / gradient header */}
                 <div className="relative h-40 bg-gradient-to-br from-[var(--color-accent)] via-[var(--color-bg-card)] to-[var(--color-neon-cyan)] opacity-30 group-hover:opacity-50 transition-opacity">
                   <div className="absolute top-4 right-4 flex items-center gap-1 bg-[var(--color-bg-primary)] bg-opacity-80 rounded-full px-3 py-1 text-xs font-mono text-[var(--color-neon-yellow)]">
                     <Star size={12} /> Featured
@@ -96,6 +108,7 @@ export default function Projects() {
                     )}
                   </div>
                 </div>
+                </Tilt>
               </motion.div>
             ))}
           </div>
@@ -107,10 +120,16 @@ export default function Projects() {
                 <motion.div
                   key={index}
                   variants={cardVariants}
-                  className="glass rounded-xl p-5 hover:glow-border transition-all group"
-                  whileHover={{ y: -5 }}
+                  className="h-full"
                 >
-                  <h3 className="text-base font-bold text-[var(--color-text-primary)] mb-2 group-hover:text-[var(--color-accent-light)] transition-colors">
+                  <Tilt
+                    tiltMaxAngleX={8}
+                    tiltMaxAngleY={8}
+                    scale={1.03}
+                    transitionSpeed={2000}
+                    className="glass rounded-xl p-5 hover:glow-border transition-all group h-full flex flex-col"
+                  >
+                    <h3 className="text-base font-bold text-[var(--color-text-primary)] mb-2 group-hover:text-[var(--color-accent-light)] transition-colors">
                     {project.title}
                   </h3>
                   <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed mb-3">
@@ -148,6 +167,7 @@ export default function Projects() {
                       </a>
                     )}
                   </div>
+                  </Tilt>
                 </motion.div>
               ))}
             </div>

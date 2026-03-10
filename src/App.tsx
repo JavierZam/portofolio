@@ -7,8 +7,10 @@ import Projects from './components/Projects'
 import SecretGaming from './components/SecretGaming'
 import Guestbook from './components/Guestbook'
 import Footer from './components/Footer'
+import { useSecretCode } from './hooks/useSecretCode'
 
 export default function App() {
+  useSecretCode()
   const [secretClickCount, setSecretClickCount] = useState(0)
   const [gamingOpen, setGamingOpen] = useState(false)
 

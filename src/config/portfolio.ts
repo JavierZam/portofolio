@@ -6,7 +6,7 @@
 
 export const PORTFOLIO = {
   // ===== PERSONAL INFO =====
-  name: 'Javier',
+  name: 'Javier Zam',
   fullName: 'Javier Zam',
   tagline: 'Building things that (sometimes) work.',
   subtitle: 'Software Engineer · Cloud Enthusiast · Occasional Gamer',
@@ -19,7 +19,7 @@ export const PORTFOLIO = {
     github: 'https://github.com/JavierZam',
     linkedin: 'https://linkedin.com/in/javier-zam',
     twitter: '',
-    instagram: '',
+    instagram: 'http://instagram.com/pierre_zam',
   },
 
   // ===== HERO SECTION =====
@@ -28,8 +28,8 @@ export const PORTFOLIO = {
     description: 'I build backend systems, break things in production, and deploy to GCP at 3 AM. Currently into cloud infrastructure, distributed systems, and making UIs that don\'t hurt your eyes.',
     cta: 'See my work ↓',
     funFacts: [
-      'Fueled by mass amounts of mendoan',
-      'Secret gamer behind the terminal',
+      'Create by My Echo, My Shadow and Me',
+      'Maybe try to type "Avie"',
       'Professional bug creator & fixer',
       'GCP is my second home',
       '35+ repos on GitHub, most of them actually work',
@@ -175,7 +175,7 @@ export const PORTFOLIO = {
         image: '/games/valorant.png',   // <-- drop your image in public/games/
         peak: 'Radiant',
         hours: '1,000+',
-        note: 'Retired from sweating, now I just vibe',
+        note: '1 Seconds as a Radiant, Never touch the game again for years',
         account: 'Tugus #001',
       },
       {
@@ -211,7 +211,7 @@ export const PORTFOLIO = {
         image: '/games/marvel-rivals.png',
         peak: 'Grandmaster',
         hours: '500+',
-        note: 'Jeff the Land Shark main energy',
+        note: 'Hela god, CnD Lord, BP main',
         account: 'Steam: vierteem',
       },
       {

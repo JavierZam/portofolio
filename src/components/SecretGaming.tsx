@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Trophy, Clock, X, ExternalLink } from 'lucide-react'
 import { PORTFOLIO } from '../config/portfolio'
+import ReflexGame from './ReflexGame'
 
 interface SecretGamingProps {
   isOpen: boolean
@@ -32,7 +33,6 @@ export default function SecretGaming({ isOpen, onClose }: SecretGamingProps) {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div className="glass-strong rounded-3xl p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto pointer-events-auto relative border border-[var(--color-neon-green)]/30 shadow-[0_0_60px_var(--color-neon-green)20]">
-              {/* Close button */}
               <motion.button
                 onClick={onClose}
                 className="absolute top-4 right-4 p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-card)] transition-colors"
@@ -146,6 +146,11 @@ export default function SecretGaming({ isOpen, onClose }: SecretGamingProps) {
                   </a>
                 ))}
               </motion.div>
+
+              {/* Aim Trainer Mini-Game */}
+              <div className="mt-8 border-t border-[var(--color-border)] pt-8">
+                <ReflexGame />
+              </div>
 
               {/* Footer */}
               <motion.p
