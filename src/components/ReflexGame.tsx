@@ -37,6 +37,17 @@ export default function ReflexGame() {
     moveTarget()
   }
 
+  // Target movement expiration timer (makes it challenging)
+  useEffect(() => {
+    if (gameState !== 'playing') return
+
+    const timeout = setTimeout(() => {
+      moveTarget()
+    }, 1000) // Target disappears/moves after 1 second
+
+    return () => clearTimeout(timeout)
+  }, [gameState, targetPos])
+
   // Game timer loop
   useEffect(() => {
     if (gameState !== 'playing') return

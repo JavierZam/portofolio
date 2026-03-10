@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronDown, MapPin } from 'lucide-react'
 import { PORTFOLIO } from '../config/portfolio'
+import TerminalDisplay from './TerminalDisplay'
 
 export default function Hero() {
   const [factIndex, setFactIndex] = useState(0)
@@ -156,6 +157,11 @@ export default function Hero() {
             )}
           </div>
         </motion.div>
+
+        {/* Terminal Boot Sequence */}
+        <div className="flex justify-center mt-8">
+          <TerminalDisplay lines={PORTFOLIO.hero.terminalLines} />
+        </div>
       </div>
 
       {/* Scroll indicator */}

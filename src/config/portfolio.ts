@@ -28,11 +28,21 @@ export const PORTFOLIO = {
     description: 'I build backend systems, break things in production, and deploy to GCP at 3 AM. Currently into cloud infrastructure, distributed systems, and making UIs that don\'t hurt your eyes.',
     cta: 'See my work ↓',
     funFacts: [
-      'Create by My Echo, My Shadow and Me',
+      'Created by My Echo, My Shadow and Me',
       'Maybe try to type "Avie"',
       'Professional bug creator & fixer',
-      'GCP is my second home',
+      'Living in Cloud World',
       '35+ repos on GitHub, most of them actually work',
+    ],
+    terminalLines: [
+      '> initializing javier_brain.sh...',
+      '> connecting to GCP instances...',
+      '> Backend APIs built: 42',
+      '> Cloud Run deployments: 156',
+      '> Bugs fixed in production: 9,001',
+      '> Server uptime guaranteed: 99.99%',
+      '> Coffee level: Critical. Need refill.',
+      '> System ready.'
     ],
   },
 
@@ -55,6 +65,13 @@ export const PORTFOLIO = {
       { label: 'Bugs Created', value: 'Countless' },
       { label: 'Bugs Fixed', value: 'Most of them?' },
     ],
+    radarStats: [
+      { subject: 'Backend (Go/Node)', A: 95, fullMark: 100 },
+      { subject: 'Cloud (GCP/Docker)', A: 90, fullMark: 100 },
+      { subject: 'Frontend (React/Vue)', A: 80, fullMark: 100 },
+      { subject: 'Debugging Speed', A: 88, fullMark: 100 },
+      { subject: 'StackOverflowing', A: 100, fullMark: 100 },
+    ]
   },
 
   // ===== EXPERIENCE SECTION =====
@@ -81,7 +98,7 @@ export const PORTFOLIO = {
       {
         title: 'Fullstack Developer',
         company: 'PT Generasi Anak Muda Berkarya (HiColleagues)',
-        period: 'Jul 2023 – Dec 2023',
+        period: 'Jul 2023 – Jan 2024',
         description: 'Built backend APIs with Golang + Echo, frontend with Vue.js, designed database schemas, documented APIs with Swagger, integrated payment gateways, and built a Telegram bot for buyer notifications. The CRM is still commercially used today.',
         tags: ['Golang', 'Echo', 'Vue.js', 'Swagger', 'Payment Gateway'],
         type: 'work' as const,
@@ -114,7 +131,7 @@ export const PORTFOLIO = {
         title: 'Pasargamex',
         description: 'Online game marketplace with real-time chat, transactions, inventory, and file uploads. Full-stack from backend to frontend deployed on GCP.',
         tags: ['Golang', 'React', 'TailwindCSS', 'GCP', 'Firebase'],
-        image: '',
+        image: '/projects/pasargamex.png',
         github: 'https://github.com/JavierZam/pasargamex',
         demo: '',
         featured: true,
@@ -123,7 +140,7 @@ export const PORTFOLIO = {
         title: 'Trackori',
         description: 'Calorie tracking app with ML-powered food recognition. Built the backend, cloud infra, and helped with Android. Retrained the ML model regularly.',
         tags: ['GCP', 'Cloud Run', 'Node.js', 'FastAPI', 'ML'],
-        image: '',
+        image: '/projects/trackori.png',
         github: 'https://github.com/JavierZam/trackori-api',
         demo: '',
         featured: true,

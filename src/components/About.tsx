@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import { PORTFOLIO } from '../config/portfolio'
+import SkillRadar from './SkillRadar'
+import PhysicsSkills from './PhysicsSkills'
 
 const containerVariants = {
   hidden: {},
@@ -86,9 +88,22 @@ export default function About() {
                 <p className="text-xs text-[var(--color-text-muted)] mt-1">{stat.label}</p>
               </motion.div>
             ))}
+            </motion.div>
+
+            {/* Flexing Developer Modules (Phase 3) */}
+            <motion.div variants={itemVariants} className="mt-16 grid md:grid-cols-2 gap-8">
+              {/* Radar Chart */}
+              <div>
+                <SkillRadar data={about.radarStats} />
+              </div>
+
+              {/* Physics Engine Tech Stack Container */}
+              <div>
+                <PhysicsSkills />
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      </div>
-    </section>
+        </div>
+      </section>
   )
 }

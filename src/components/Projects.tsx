@@ -59,12 +59,20 @@ export default function Projects() {
                   glarePosition="all"
                   className="glass rounded-2xl overflow-hidden group hover:glow-border transition-all h-full flex flex-col"
                 >
-                  {/* Image placeholder / gradient header */}
-                <div className="relative h-40 bg-gradient-to-br from-[var(--color-accent)] via-[var(--color-bg-card)] to-[var(--color-neon-cyan)] opacity-30 group-hover:opacity-50 transition-opacity">
-                  <div className="absolute top-4 right-4 flex items-center gap-1 bg-[var(--color-bg-primary)] bg-opacity-80 rounded-full px-3 py-1 text-xs font-mono text-[var(--color-neon-yellow)]">
-                    <Star size={12} /> Featured
+                  {/* Image or gradient header */}
+                  <div className={`relative h-48 sm:h-56 w-full ${!project.image ? 'bg-gradient-to-br from-[var(--color-accent)] via-[var(--color-bg-card)] to-[var(--color-neon-cyan)] opacity-30 group-hover:opacity-50' : 'bg-white'} transition-all overflow-hidden flex items-center justify-center p-4`}>
+                    {project.image && (
+                      <img 
+                        src={project.image} 
+                        alt={project.title} 
+                        className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-700"
+                      />
+                    )}
+                    
+                    <div className="absolute top-4 right-4 flex items-center gap-1 bg-[var(--color-bg-primary)] bg-opacity-90 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-mono text-[var(--color-neon-yellow)] shadow-lg z-10 border border-[var(--color-neon-yellow)]/20">
+                      <Star size={12} /> Featured
+                    </div>
                   </div>
-                </div>
 
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2 group-hover:text-[var(--color-accent-light)] transition-colors">
