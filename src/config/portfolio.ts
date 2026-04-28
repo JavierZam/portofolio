@@ -128,6 +128,15 @@ export const PORTFOLIO = {
     subtitle: 'Stuff I built instead of sleeping',
     items: [
       {
+        title: 'PayViz',
+        description: 'Enterprise payroll management system handling Rp 100M+ monthly. Features include employee salary management with BPJS & PPh 21 tax automation, payroll period processing, payslip generation, Gross Up method support, Excel import, PDF export, and Coretax integration.',
+        tags: ['Vue.js', 'Node.js', 'PostgreSQL', 'Enterprise', 'Payroll'],
+        image: '/projects/payviz.png',
+        github: '',
+        demo: 'https://payviz.adviz.id',
+        featured: true,
+      },
+      {
         title: 'Pasargamex',
         description: 'Online game marketplace with real-time chat, transactions, inventory, and file uploads. Full-stack from backend to frontend deployed on GCP.',
         tags: ['Golang', 'React', 'TailwindCSS', 'GCP', 'Firebase'],
