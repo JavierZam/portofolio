@@ -52,6 +52,8 @@ const DIFFICULTY_CONFIG: Record<Difficulty, { arrowsPerBeat: number; label: stri
 
 // Travel time: how many seconds an arrow takes to scroll from bottom to hit zone
 const TRAVEL_TIME = 2.0
+// Hit zone position (percentage from top of arena)
+const HIT_ZONE_Y = 6
 // Hit window thresholds (seconds)
 const PERFECT_WINDOW = 0.12
 const GOOD_WINDOW = 0.25
@@ -63,12 +65,11 @@ function generateArrows(duration: number, bpm: number, difficulty: Difficulty): 
   const directions: Direction[] = ['left', 'down', 'up', 'right']
   let id = 0
 
-  // Start generating from 2s in (give player time to prepare)
-  const startTime = 2
+  // Start generating from 3s in (give player time after countdown)
+  const startTime = 3
   const endTime = duration - 1
 
   for (let t = startTime; t < endTime; t += beatInterval / density) {
-    // Randomize which lane
     const dir = directions[Math.floor(Math.random() * directions.length)]
     arrows.push({ id: id++, direction: dir, time: t, hit: false, missed: false })
   }
@@ -95,25 +96,32 @@ export default function ArrowDance() {
   const [laneFlash, setLaneFlash] = useState<Record<Direction, boolean>>({
     left: false, down: false, up: false, right: false,
   })
+  // Force re-render for arrow positions
+  const [, setTick] = useState(0)
 
   const arrowsRef = useRef<Arrow[]>([])
-  const gameLoopRef = useRef<number | null>(null)
+  const phaseRef = useRef<GamePhase>('setup')
   const effectIdRef = useRef(0)
 
-  const { loadVideo, play, pause, stop, isReady, isPlaying, currentTime, duration } = useYouTubePlayer('yt-player')
+  const yt = useYouTubePlayer('yt-player')
+  const ytRef = useRef(yt)
+  ytRef.current = yt
+
+  // Keep phaseRef in sync
+  useEffect(() => { phaseRef.current = phase }, [phase])
 
   // Handle YouTube URL submission
   const handleLoadVideo = () => {
     const videoId = extractVideoId(youtubeUrl)
     if (videoId) {
-      loadVideo(videoId)
+      yt.loadVideo(videoId)
     }
   }
 
   // Start game
   const startGame = () => {
-    if (!isReady || duration === 0) return
-    const generated = generateArrows(duration, bpm, difficulty)
+    if (!yt.isReady || yt.duration === 0) return
+    const generated = generateArrows(yt.duration, bpm, difficulty)
     setArrows(generated)
     arrowsRef.current = generated
     setScore(0)
@@ -127,24 +135,25 @@ export default function ArrowDance() {
     setCountdown(3)
   }
 
-  // Countdown
+  // Countdown timer
   useEffect(() => {
     if (phase !== 'countdown') return
     if (countdown <= 0) {
       setPhase('playing')
-      play()
+      yt.play()
       return
     }
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000)
     return () => clearTimeout(timer)
-  }, [phase, countdown, play])
+  }, [phase, countdown])
 
-  // Game loop: check for missed arrows
+  // Main game loop: uses a single setInterval that reads current time from the ref
   useEffect(() => {
     if (phase !== 'playing') return
-    
-    gameLoopRef.current = window.setInterval(() => {
-      const now = currentTime
+
+    const interval = window.setInterval(() => {
+      const now = ytRef.current.currentTime
+      const dur = ytRef.current.duration
       let anyMissed = false
 
       arrowsRef.current = arrowsRef.current.map(arrow => {
@@ -162,21 +171,22 @@ export default function ArrowDance() {
       }
 
       // Check if song ended
-      if (duration > 0 && now >= duration - 0.5) {
+      if (dur > 0 && now >= dur - 0.5) {
         setPhase('results')
-        stop()
-        if (gameLoopRef.current) clearInterval(gameLoopRef.current)
+        ytRef.current.stop()
+        return
       }
-    }, 50)
 
-    return () => {
-      if (gameLoopRef.current) clearInterval(gameLoopRef.current)
-    }
-  }, [phase, currentTime, duration, stop])
+      // Force a re-render so arrows reposition
+      setTick(t => t + 1)
+    }, 33) // ~30fps
+
+    return () => clearInterval(interval)
+  }, [phase])
 
   // Keyboard handler
   const handleKeyPress = useCallback((e: KeyboardEvent) => {
-    if (phase !== 'playing') return
+    if (phaseRef.current !== 'playing') return
     const direction = ARROW_KEYS[e.key]
     if (!direction) return
     e.preventDefault()
@@ -185,9 +195,9 @@ export default function ArrowDance() {
     setLaneFlash(prev => ({ ...prev, [direction]: true }))
     setTimeout(() => setLaneFlash(prev => ({ ...prev, [direction]: false })), 150)
 
-    const now = currentTime
+    const now = ytRef.current.currentTime
 
-    // Find the closest unhit arrow in this lane within the hit window
+    // Find the closest unhit arrow in this lane within hit window
     let bestArrow: Arrow | null = null
     let bestDiff = Infinity
 
@@ -220,18 +230,18 @@ export default function ArrowDance() {
       setHitEffects(prev => [...prev, { id: eid, direction, grade, timestamp: Date.now() }])
       setTimeout(() => setHitEffects(prev => prev.filter(e => e.id !== eid)), 500)
     }
-  }, [phase, currentTime])
+  }, [])
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [handleKeyPress])
 
-  // Calculate arrow position based on current time
+  // Calculate arrow Y position: scrolls from BOTTOM (100%) up to HIT_ZONE (6%)
   const getArrowY = (arrowTime: number) => {
-    const diff = arrowTime - currentTime
-    const progress = diff / TRAVEL_TIME // 1 = bottom, 0 = hit zone, negative = past
-    return (1 - progress) * 100 // percentage from top (0% = top/hit zone, 100% = off-screen bottom)
+    const diff = arrowTime - ytRef.current.currentTime
+    const progress = diff / TRAVEL_TIME // 1 = just spawned (bottom), 0 = at hit zone
+    return HIT_ZONE_Y + progress * (100 - HIT_ZONE_Y)
   }
 
   const getRank = () => {
@@ -248,253 +258,255 @@ export default function ArrowDance() {
 
   return (
     <div className="w-full max-w-3xl mx-auto select-none">
-      <AnimatePresence mode="wait">
-        {/* ===== SETUP PHASE ===== */}
-        {phase === 'setup' && (
-          <motion.div
-            key="setup"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="glass rounded-2xl p-8 space-y-6"
-          >
-            <div className="text-center mb-6">
-              <Music size={40} className="mx-auto mb-3 text-pink-400" />
-              <h2 className="text-2xl font-black text-white">Arrow Dance</h2>
-              <p className="text-sm text-gray-400 mt-1">Paste a YouTube link, pick your difficulty, and dance.</p>
-            </div>
+      {/* ===== SETUP PHASE ===== */}
+      {phase === 'setup' && (
+        <motion.div
+          key="setup"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl p-8 space-y-6"
+        >
+          <div className="text-center mb-6">
+            <Music size={40} className="mx-auto mb-3 text-pink-400" />
+            <h2 className="text-2xl font-black text-white">Arrow Dance</h2>
+            <p className="text-sm text-gray-400 mt-1">Paste a YouTube link, pick your difficulty, and dance.</p>
+          </div>
 
-            {/* YouTube URL */}
-            <div>
-              <label className="text-xs font-mono text-gray-400 mb-2 block">YouTube URL</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={youtubeUrl}
-                  onChange={e => setYoutubeUrl(e.target.value)}
-                  placeholder="https://youtube.com/watch?v=..."
-                  className="flex-1 px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-white text-sm font-mono focus:outline-none focus:border-pink-500 transition-colors"
-                />
-                <button
-                  onClick={handleLoadVideo}
-                  className="px-4 py-3 rounded-xl bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 border border-pink-500/30 text-sm font-bold transition-colors"
-                >
-                  Load
-                </button>
-              </div>
-              {isReady && (
-                <p className="text-xs text-green-400 mt-2 font-mono">
-                  Video loaded ({Math.round(duration)}s)
-                </p>
-              )}
-            </div>
-
-            {/* BPM */}
-            <div>
-              <label className="text-xs font-mono text-gray-400 mb-2 block">BPM (Beats Per Minute)</label>
+          {/* YouTube URL */}
+          <div>
+            <label className="text-xs font-mono text-gray-400 mb-2 block">YouTube URL</label>
+            <div className="flex gap-2">
               <input
-                type="number"
-                value={bpm}
-                onChange={e => setBpm(Number(e.target.value))}
-                min={60}
-                max={300}
-                className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-white text-sm font-mono focus:outline-none focus:border-pink-500 transition-colors"
+                type="text"
+                value={youtubeUrl}
+                onChange={e => setYoutubeUrl(e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+                className="flex-1 px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-white text-sm font-mono focus:outline-none focus:border-pink-500 transition-colors"
               />
-              <p className="text-xs text-gray-500 mt-1">Tip: Search "[song name] BPM" on Google to find BPM.</p>
+              <button
+                onClick={handleLoadVideo}
+                className="px-4 py-3 rounded-xl bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 border border-pink-500/30 text-sm font-bold transition-colors"
+              >
+                Load
+              </button>
             </div>
+            {yt.isReady && (
+              <p className="text-xs text-green-400 mt-2 font-mono">
+                ✓ Video loaded ({Math.round(yt.duration)}s)
+              </p>
+            )}
+          </div>
 
-            {/* Difficulty */}
-            <div>
-              <label className="text-xs font-mono text-gray-400 mb-2 block">Difficulty</label>
-              <div className="grid grid-cols-3 gap-3">
-                {(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setDifficulty(d)}
-                    className={`py-3 rounded-xl text-sm font-bold border transition-all ${
-                      difficulty === d
-                        ? 'bg-pink-500/20 border-pink-500 text-pink-400'
-                        : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-gray-400 hover:border-gray-500'
-                    }`}
-                  >
-                    {DIFFICULTY_CONFIG[d].label}
-                  </button>
-                ))}
-              </div>
+          {/* BPM */}
+          <div>
+            <label className="text-xs font-mono text-gray-400 mb-2 block">BPM (Beats Per Minute)</label>
+            <input
+              type="number"
+              value={bpm}
+              onChange={e => setBpm(Number(e.target.value))}
+              min={60}
+              max={300}
+              className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-white text-sm font-mono focus:outline-none focus:border-pink-500 transition-colors"
+            />
+            <p className="text-xs text-gray-500 mt-1">Tip: Search "[song name] BPM" on Google to find the tempo.</p>
+          </div>
+
+          {/* Difficulty */}
+          <div>
+            <label className="text-xs font-mono text-gray-400 mb-2 block">Difficulty</label>
+            <div className="grid grid-cols-3 gap-3">
+              {(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDifficulty(d)}
+                  className={`py-3 rounded-xl text-sm font-bold border transition-all ${
+                    difficulty === d
+                      ? 'bg-pink-500/20 border-pink-500 text-pink-400'
+                      : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-gray-400 hover:border-gray-500'
+                  }`}
+                >
+                  {DIFFICULTY_CONFIG[d].label}
+                </button>
+              ))}
             </div>
+          </div>
 
-            {/* Start */}
-            <button
-              onClick={startGame}
-              disabled={!isReady}
-              className={`w-full py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 transition-all ${
-                isReady
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_0_30px_rgba(236,72,153,0.3)] hover:shadow-[0_0_50px_rgba(236,72,153,0.5)]'
-                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <Play size={20} /> {isReady ? 'Start Dance' : 'Load a video first'}
-            </button>
-          </motion.div>
-        )}
-
-        {/* ===== COUNTDOWN ===== */}
-        {phase === 'countdown' && (
-          <motion.div
-            key="countdown"
-            className="flex items-center justify-center h-[500px]"
+          {/* Start */}
+          <button
+            onClick={startGame}
+            disabled={!yt.isReady}
+            className={`w-full py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 transition-all ${
+              yt.isReady
+                ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-[0_0_30px_rgba(236,72,153,0.3)] hover:shadow-[0_0_50px_rgba(236,72,153,0.5)]'
+                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+            }`}
           >
+            <Play size={20} /> {yt.isReady ? 'Start Dance' : 'Load a video first'}
+          </button>
+        </motion.div>
+      )}
+
+      {/* ===== COUNTDOWN ===== */}
+      {phase === 'countdown' && (
+        <div className="flex items-center justify-center h-[500px]">
+          <AnimatePresence mode="wait">
             <motion.span
               key={countdown}
               initial={{ scale: 2, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.5, opacity: 0 }}
+              transition={{ duration: 0.3 }}
               className="text-8xl font-black text-pink-400"
             >
               {countdown > 0 ? countdown : 'GO!'}
             </motion.span>
-          </motion.div>
-        )}
+          </AnimatePresence>
+        </div>
+      )}
 
-        {/* ===== PLAYING PHASE ===== */}
-        {phase === 'playing' && (
-          <motion.div
-            key="playing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {/* Score bar */}
-            <div className="flex justify-between items-center mb-4 px-2 font-mono text-sm">
-              <div className="text-pink-400 font-bold">Score: {score}</div>
-              <div className="flex items-center gap-1">
-                <Zap size={14} className="text-yellow-400" />
-                <span className={`font-bold ${combo >= 10 ? 'text-yellow-400 animate-pulse' : 'text-gray-400'}`}>
-                  {combo}x Combo
-                </span>
-              </div>
+      {/* ===== PLAYING PHASE ===== */}
+      {phase === 'playing' && (
+        <div>
+          {/* Score bar */}
+          <div className="flex justify-between items-center mb-4 px-2 font-mono text-sm">
+            <div className="text-pink-400 font-bold">Score: {score}</div>
+            <div className="flex items-center gap-1">
+              <Zap size={14} className="text-yellow-400" />
+              <span className={`font-bold ${combo >= 10 ? 'text-yellow-400 animate-pulse' : 'text-gray-400'}`}>
+                {combo}x Combo
+              </span>
+            </div>
+          </div>
+
+          {/* Game Arena */}
+          <div className="relative w-full h-[480px] glass rounded-2xl overflow-hidden border border-[var(--color-border)]">
+            {/* Lane separators */}
+            <div className="absolute inset-0 flex">
+              {(['left', 'down', 'up', 'right'] as Direction[]).map(dir => (
+                <div
+                  key={dir}
+                  className={`flex-1 border-x border-white/5 transition-colors duration-150 ${
+                    laneFlash[dir] ? 'bg-white/10' : ''
+                  }`}
+                />
+              ))}
             </div>
 
-            {/* Game Arena */}
-            <div className="relative w-full h-[480px] glass rounded-2xl overflow-hidden border border-[var(--color-border)]">
-              {/* Lane separators */}
-              <div className="absolute inset-0 flex">
-                {(['left', 'down', 'up', 'right'] as Direction[]).map(dir => (
-                  <div
-                    key={dir}
-                    className={`flex-1 border-x border-white/5 transition-colors duration-150 ${
-                      laneFlash[dir] ? 'bg-white/10' : ''
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {/* Hit Zone (top ~12%) */}
-              <div className="absolute top-0 left-0 right-0 h-[12%] border-b-2 border-pink-500/50 bg-gradient-to-b from-pink-500/10 to-transparent flex z-10">
-                {(['left', 'down', 'up', 'right'] as Direction[]).map(dir => (
-                  <div key={dir} className="flex-1 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-xl border-2 border-white/20 flex items-center justify-center text-2xl font-black text-white/30">
-                      {ARROW_SYMBOLS[dir]}
-                    </div>
+            {/* Hit Zone (top ~12%) */}
+            <div className="absolute top-0 left-0 right-0 h-[12%] border-b-2 border-pink-500/50 bg-gradient-to-b from-pink-500/10 to-transparent flex z-10">
+              {(['left', 'down', 'up', 'right'] as Direction[]).map(dir => (
+                <div key={dir} className="flex-1 flex items-center justify-center">
+                  <div className={`w-14 h-14 rounded-xl border-2 flex items-center justify-center text-2xl font-black transition-all ${
+                    laneFlash[dir]
+                      ? 'border-pink-400 text-pink-400 bg-pink-500/20 shadow-[0_0_15px_rgba(236,72,153,0.5)]'
+                      : 'border-white/20 text-white/30'
+                  }`}>
+                    {ARROW_SYMBOLS[dir]}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+            </div>
 
-              {/* Hit Effects */}
+            {/* Hit Effects */}
+            <AnimatePresence>
               {hitEffects.map(effect => {
                 const laneIndex = ['left', 'down', 'up', 'right'].indexOf(effect.direction)
                 return (
                   <motion.div
                     key={effect.id}
-                    initial={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 1, scale: 1, y: 0 }}
                     animate={{ opacity: 0, scale: 1.5, y: -30 }}
+                    exit={{ opacity: 0 }}
                     transition={{ duration: 0.4 }}
                     className="absolute z-20 pointer-events-none"
-                    style={{ top: '12%', left: `${laneIndex * 25 + 12.5}%`, transform: 'translateX(-50%)' }}
+                    style={{ top: '14%', left: `${laneIndex * 25 + 12.5}%`, transform: 'translateX(-50%)' }}
                   >
                     <span className={`text-sm font-black ${effect.grade === 'perfect' ? 'text-yellow-400' : 'text-green-400'}`}>
-                      {effect.grade === 'perfect' ? 'PERFECT' : 'GOOD'}
+                      {effect.grade === 'perfect' ? 'PERFECT!' : 'GOOD'}
                     </span>
                   </motion.div>
                 )
               })}
+            </AnimatePresence>
 
-              {/* Scrolling Arrows */}
-              {arrows
-                .filter(a => {
-                  const yPct = getArrowY(a.time)
-                  return yPct > -20 && yPct < 120 && !a.hit
-                })
-                .map(arrow => {
-                  const yPct = getArrowY(arrow.time)
-                  const laneIndex = ['left', 'down', 'up', 'right'].indexOf(arrow.direction)
-                  return (
-                    <div
-                      key={arrow.id}
-                      className={`absolute w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-black transition-opacity ${
-                        arrow.missed
-                          ? 'opacity-20 text-red-400'
-                          : `bg-gradient-to-br ${LANE_COLORS[arrow.direction]} text-white shadow-lg`
-                      }`}
-                      style={{
-                        top: `${yPct}%`,
-                        left: `${laneIndex * 25 + 12.5}%`,
-                        transform: 'translate(-50%, -50%)',
-                      }}
-                    >
-                      {ARROW_SYMBOLS[arrow.direction]}
-                    </div>
-                  )
-                })}
+            {/* Scrolling Arrows */}
+            {arrows
+              .filter(a => {
+                if (a.hit) return false
+                const yPct = getArrowY(a.time)
+                return yPct > -10 && yPct < 110
+              })
+              .map(arrow => {
+                const yPct = getArrowY(arrow.time)
+                const laneIndex = ['left', 'down', 'up', 'right'].indexOf(arrow.direction)
+                return (
+                  <div
+                    key={arrow.id}
+                    className={`absolute w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-black ${
+                      arrow.missed
+                        ? 'opacity-20 text-red-400 border border-red-400/30'
+                        : `bg-gradient-to-br ${LANE_COLORS[arrow.direction]} text-white shadow-lg`
+                    }`}
+                    style={{
+                      top: `${yPct}%`,
+                      left: `${laneIndex * 25 + 12.5}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
+                    {ARROW_SYMBOLS[arrow.direction]}
+                  </div>
+                )
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* ===== RESULTS ===== */}
+      {phase === 'results' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass rounded-2xl p-8 text-center"
+        >
+          <Trophy size={48} className={`mx-auto mb-4 ${getRank().color}`} />
+          <h2 className="text-4xl font-black mb-1">Rank: <span className={getRank().color}>{getRank().name}</span></h2>
+          <p className="text-3xl font-bold text-white mb-8">Score: {score}</p>
+
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="glass rounded-xl p-4">
+              <p className="text-2xl font-black text-yellow-400">{perfects}</p>
+              <p className="text-xs text-gray-400">Perfect</p>
             </div>
-          </motion.div>
-        )}
-
-        {/* ===== RESULTS ===== */}
-        {phase === 'results' && (
-          <motion.div
-            key="results"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="glass rounded-2xl p-8 text-center"
-          >
-            <Trophy size={48} className={`mx-auto mb-4 ${getRank().color}`} />
-            <h2 className="text-4xl font-black mb-1">Rank: <span className={getRank().color}>{getRank().name}</span></h2>
-            <p className="text-3xl font-bold text-white mb-8">Score: {score}</p>
-
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="glass rounded-xl p-4">
-                <p className="text-2xl font-black text-yellow-400">{perfects}</p>
-                <p className="text-xs text-gray-400">Perfect</p>
-              </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-2xl font-black text-green-400">{goods}</p>
-                <p className="text-xs text-gray-400">Good</p>
-              </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-2xl font-black text-red-400">{misses}</p>
-                <p className="text-xs text-gray-400">Miss</p>
-              </div>
+            <div className="glass rounded-xl p-4">
+              <p className="text-2xl font-black text-green-400">{goods}</p>
+              <p className="text-xs text-gray-400">Good</p>
             </div>
-
-            <p className="text-sm text-gray-400 mb-6 font-mono">Max Combo: {maxCombo}x</p>
-
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => {
-                  setPhase('setup')
-                  stop()
-                }}
-                className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-all flex items-center gap-2"
-              >
-                <RotateCcw size={18} /> Play Again
-              </button>
+            <div className="glass rounded-xl p-4">
+              <p className="text-2xl font-black text-red-400">{misses}</p>
+              <p className="text-xs text-gray-400">Miss</p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
 
-      {/* Hidden YouTube Player */}
-      <div id="yt-player" className="hidden" />
+          <p className="text-sm text-gray-400 mb-6 font-mono">Max Combo: {maxCombo}x</p>
+
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                setPhase('setup')
+                yt.stop()
+              }}
+              className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-all flex items-center gap-2"
+            >
+              <RotateCcw size={18} /> Play Again
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* YouTube Player - hidden but rendered (not display:none!) */}
+      <div className="fixed -top-[9999px] -left-[9999px] w-0 h-0 overflow-hidden">
+        <div id="yt-player" />
+      </div>
     </div>
   )
 }
