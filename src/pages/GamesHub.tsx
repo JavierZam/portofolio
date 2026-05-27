@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Gamepad2, ArrowLeft, Music, Crosshair } from 'lucide-react'
+import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy } from 'lucide-react'
 
 const games = [
   {
@@ -18,6 +18,14 @@ const games = [
     path: '/games',
     color: 'from-red-500 to-orange-600',
     status: 'In Secret Gaming',
+  },
+  {
+    title: 'NBA HOF & Arcade',
+    description: 'Explore player statistics (GOATs, legends) and shoot hoops in the 3PT Shooter game.',
+    icon: Trophy,
+    path: '/nba',
+    color: 'from-amber-500 to-red-600',
+    status: 'Explore Now',
   },
 ]
 
@@ -52,7 +60,7 @@ export default function GamesHub() {
         </motion.div>
 
         {/* Game Cards */}
-        <div className="grid sm:grid-cols-2 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {games.map((game, i) => (
             <motion.div
               key={game.title}

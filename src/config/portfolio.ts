@@ -287,6 +287,158 @@ export const PORTFOLIO = {
     year: new Date().getFullYear(),
   },
 
+  // ===== NBA HALL OF FAME =====
+  nba: {
+    title: 'NBA Holographic Archive',
+    subtitle: 'My favorite players, stats, and records in a high-tech dashboard.',
+    players: [
+      {
+        id: 'jordan',
+        name: 'Michael Jordan',
+        fullName: 'Michael Jeffrey Jordan',
+        nickname: 'Air Jordan / The Black Cat',
+        jersey: '#23',
+        position: 'Shooting Guard',
+        team: 'Chicago Bulls',
+        careerStats: { ppg: 30.1, rpg: 6.2, apg: 5.3, spg: 2.3, bpg: 0.8, rings: 6 },
+        achievements: ['6x NBA Champion', '6x Finals MVP', '5x NBA MVP', '1x DPOY (1988)', '10x Scoring Champion', '9x All-Defensive First Team'],
+        skills: [
+          { subject: 'Scoring', A: 99, B: 0, fullMark: 100 },
+          { subject: 'Defense', A: 98, B: 0, fullMark: 100 },
+          { subject: 'Playmaking', A: 88, B: 0, fullMark: 100 },
+          { subject: 'Clutch', A: 99, B: 0, fullMark: 100 },
+          { subject: 'Athleticism', A: 99, B: 0, fullMark: 100 },
+          { subject: 'Shooting', A: 85, B: 0, fullMark: 100 }
+        ],
+        colorTheme: 'from-red-600 to-black',
+        accentColor: '#dc2626',
+        quote: "I've failed over and over and over again in my life. And that is why I succeed.",
+        funFact: "Undefeated in the NBA Finals (6-0) and never let a series go to a Game 7.",
+        imageUrl: '/nba/jordan.png'
+      },
+      {
+        id: 'lebron',
+        name: 'LeBron James',
+        fullName: 'LeBron Raymone James Sr.',
+        nickname: 'King James / The Chosen One',
+        jersey: '#23 / #6',
+        position: 'Small Forward / Power Forward',
+        team: 'Los Angeles Lakers',
+        careerStats: { ppg: 27.1, rpg: 7.5, apg: 7.4, spg: 1.5, bpg: 0.7, rings: 4 },
+        achievements: ['4x NBA Champion', '4x Finals MVP', '4x NBA MVP', 'All-Time Scoring Leader', '20x All-NBA Selection', '20x NBA All-Star'],
+        skills: [
+          { subject: 'Scoring', A: 97, B: 0, fullMark: 100 },
+          { subject: 'Defense', A: 90, B: 0, fullMark: 100 },
+          { subject: 'Playmaking', A: 98, B: 0, fullMark: 100 },
+          { subject: 'Clutch', A: 95, B: 0, fullMark: 100 },
+          { subject: 'Athleticism', A: 98, B: 0, fullMark: 100 },
+          { subject: 'Shooting', A: 88, B: 0, fullMark: 100 }
+        ],
+        colorTheme: 'from-purple-600 to-yellow-500',
+        accentColor: '#eab308',
+        quote: "I like criticism. It makes you strong.",
+        funFact: "The only player in NBA history to record 40,000+ points, 10,000+ rebounds, and 10,000+ assists.",
+        imageUrl: '/nba/lebron.png'
+      },
+      {
+        id: 'kobe',
+        name: 'Kobe Bryant',
+        fullName: 'Kobe Bean Bryant',
+        nickname: 'The Black Mamba',
+        jersey: '#8 / #24',
+        position: 'Shooting Guard',
+        team: 'Los Angeles Lakers',
+        careerStats: { ppg: 25.0, rpg: 5.2, apg: 4.7, spg: 1.4, bpg: 0.5, rings: 5 },
+        achievements: ['5x NBA Champion', '2x Finals MVP', '1x NBA MVP (2008)', '18x All-Star', '12x All-Defensive Team', '2x Scoring Champion'],
+        skills: [
+          { subject: 'Scoring', A: 98, B: 0, fullMark: 100 },
+          { subject: 'Defense', A: 95, B: 0, fullMark: 100 },
+          { subject: 'Playmaking', A: 85, B: 0, fullMark: 100 },
+          { subject: 'Clutch', A: 98, B: 0, fullMark: 100 },
+          { subject: 'Athleticism', A: 95, B: 0, fullMark: 100 },
+          { subject: 'Shooting', A: 86, B: 0, fullMark: 100 }
+        ],
+        colorTheme: 'from-yellow-500 via-purple-700 to-purple-900',
+        accentColor: '#8b5cf6',
+        quote: "Mamba Mentality is all about focusing on the process and trusting in the hard work.",
+        funFact: "Scored 81 points in a single game against the Raptors in 2006, the 2nd highest in NBA history.",
+        imageUrl: '/nba/kobe.png'
+      },
+      {
+        id: 'iverson',
+        name: 'Allen Iverson',
+        fullName: 'Allen Ezail Iverson',
+        nickname: 'The Answer / A.I.',
+        jersey: '#3',
+        position: 'Point Guard / Shooting Guard',
+        team: 'Philadelphia 76ers',
+        careerStats: { ppg: 26.7, rpg: 3.7, apg: 6.2, spg: 2.2, bpg: 0.2, rings: 0 },
+        achievements: ['1x NBA MVP (2001)', '11x NBA All-Star', '4x Scoring Champion', '3x Steals Leader', 'Rookie of the Year (1997)', 'Hall of Fame (2016)'],
+        skills: [
+          { subject: 'Scoring', A: 94, B: 0, fullMark: 100 },
+          { subject: 'Defense', A: 80, B: 0, fullMark: 100 },
+          { subject: 'Playmaking', A: 88, B: 0, fullMark: 100 },
+          { subject: 'Clutch', A: 92, B: 0, fullMark: 100 },
+          { subject: 'Athleticism', A: 96, B: 0, fullMark: 100 },
+          { subject: 'Shooting', A: 78, B: 0, fullMark: 100 }
+        ],
+        colorTheme: 'from-blue-600 via-white to-red-600',
+        accentColor: '#2563eb',
+        quote: "I don't want to be another Jordan or Magic. I want to be Allen Iverson.",
+        funFact: "Famously crossed over Michael Jordan during his rookie season and led the league in steals 3 years in a row.",
+        imageUrl: '/nba/iverson.png'
+      },
+      {
+        id: 'curry',
+        name: 'Stephen Curry',
+        fullName: 'Wardell Stephen Curry II',
+        nickname: 'The Chef / Baby-Faced Assassin',
+        jersey: '#30',
+        position: 'Point Guard',
+        team: 'Golden State Warriors',
+        careerStats: { ppg: 24.8, rpg: 4.7, apg: 6.4, spg: 1.5, bpg: 0.2, rings: 4 },
+        achievements: ['4x NBA Champion', '2x NBA MVP', '1x Finals MVP', 'All-Time 3-Point Leader', 'Only Unanimous MVP (2016)', '2x Scoring Champion'],
+        skills: [
+          { subject: 'Scoring', A: 95, B: 0, fullMark: 100 },
+          { subject: 'Defense', A: 75, B: 0, fullMark: 100 },
+          { subject: 'Playmaking', A: 92, B: 0, fullMark: 100 },
+          { subject: 'Clutch', A: 96, B: 0, fullMark: 100 },
+          { subject: 'Athleticism', A: 80, B: 0, fullMark: 100 },
+          { subject: 'Shooting', A: 99, B: 0, fullMark: 100 }
+        ],
+        colorTheme: 'from-blue-500 to-yellow-400',
+        accentColor: '#3b82f6',
+        quote: "Success is not an accident, success is a choice.",
+        funFact: "Holds the record for the most 3-pointers made in a single season (402 in 2015-16).",
+        imageUrl: '/nba/curry.png'
+      },
+      {
+        id: 'wemby',
+        name: 'Victor Wembanyama',
+        fullName: 'Victor Wembanyama',
+        nickname: 'The Alien / Wemby',
+        jersey: '#1',
+        position: 'Power Forward / Center',
+        team: 'San Antonio Spurs',
+        careerStats: { ppg: 21.4, rpg: 10.6, apg: 3.9, spg: 1.2, bpg: 3.6, rings: 0 },
+        achievements: ['Rookie of the Year (2024)', 'NBA All-Defensive First Team', 'NBA Blocks Leader (2024)', '1x Olympic Silver Medalist'],
+        skills: [
+          { subject: 'Scoring', A: 88, B: 0, fullMark: 100 },
+          { subject: 'Defense', A: 99, B: 0, fullMark: 100 },
+          { subject: 'Playmaking', A: 80, B: 0, fullMark: 100 },
+          { subject: 'Clutch', A: 85, B: 0, fullMark: 100 },
+          { subject: 'Athleticism', A: 95, B: 0, fullMark: 100 },
+          { subject: 'Shooting', A: 82, B: 0, fullMark: 100 }
+        ],
+        colorTheme: 'from-gray-700 to-black',
+        accentColor: '#6b7280',
+        quote: "I want to be myself, not what others want me to be.",
+        funFact: "At 7'4\" with an 8-foot wingspan, he can touch the rim standing on his tiptoes and block 3-point shots with ease.",
+        imageUrl: '/nba/wemby.png'
+      }
+    ]
+  },
+
   // ===== THEME CUSTOMIZATION =====
   theme: {
     accentColor: '#7c3aed',
