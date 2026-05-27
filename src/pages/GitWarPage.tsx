@@ -136,8 +136,27 @@ export default function GitWarPage() {
   const countdownInterval = useRef<number | null>(null)
   const startTimeRef = useRef<number>(0)
 
+  const gameStateRef = useRef(gameState)
+  const teamRef = useRef(team)
+  const playModeRef = useRef(playMode)
+  const roomCodeRef = useRef(roomCode)
+  const soundEnabledRef = useRef(soundEnabled)
+
+  useEffect(() => { gameStateRef.current = gameState }, [gameState])
+  useEffect(() => { teamRef.current = team }, [team])
+  useEffect(() => { playModeRef.current = playMode }, [playMode])
+  useEffect(() => { roomCodeRef.current = roomCode }, [roomCode])
+  useEffect(() => { soundEnabledRef.current = soundEnabled }, [soundEnabled])
+
+  // Focus window when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      window.focus()
+    }
+  }, [gameState])
+
   const triggerAudio = (type: 'push' | 'pull' | 'click' | 'victory' | 'buzzer' | 'beep') => {
-    if (soundEnabled) playWarSynthSound(type)
+    if (soundEnabledRef.current) playWarSynthSound(type)
   }
 
   // --- LERP ANIMATION LOOP (Smooth Commit Node Sliding) ---
@@ -364,16 +383,16 @@ export default function GitWarPage() {
 
   // --- KEYBOARD MASHING LISTENERS ---
   const handlePullMash = useCallback(() => {
-    if (gameState !== 'playing') return
+    if (gameStateRef.current !== 'playing') return
 
     // Trigger local audio click
-    triggerAudio(team)
+    triggerAudio(teamRef.current)
 
     // Visual screen shake vibration
     setIsShaking(true)
     setTimeout(() => setIsShaking(false), 50)
 
-    if (playMode === 'solo') {
+    if (playModeRef.current === 'solo') {
       // Offline local update
       setDbPosition(prev => {
         const next = Math.max(0, prev - 2) // You pull left (PUSH)
@@ -385,7 +404,7 @@ export default function GitWarPage() {
       })
     } else {
       // Online buffer delta update
-      const step = team === 'push' ? -2 : 2
+      const step = teamRef.current === 'push' ? -2 : 2
       accumulatedPull.current += step
 
       // Optimistic local UI position shift
@@ -395,37 +414,47 @@ export default function GitWarPage() {
         dbFlushTimer.current = window.setInterval(flushPullBuffer, 180)
       }
     }
-  }, [gameState, playMode, team])
+  }, [])
 
-  const flushPullBuffer = async () => {
+  const flushPullBuffer = useCallback(async () => {
     if (accumulatedPull.current === 0) return
     const delta = accumulatedPull.current
     accumulatedPull.current = 0
 
     try {
-      const roomRef = doc(db, 'dev_race_lobby', roomCode)
+      const roomRef = doc(db, 'dev_race_lobby', roomCodeRef.current)
       await updateDoc(roomRef, {
         position: increment(delta)
       })
     } catch (e) {
       console.error('Failed to sync pull delta:', e)
     }
-  }
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameState !== 'playing') return
+      // If user is focused on username input or lobby input, don't trigger game mashing
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return
+      }
+
+      if (gameStateRef.current !== 'playing') return
       
+      const key = e.key.toLowerCase()
+      const code = e.code
+
       // PUSH host mashes 'A', PULL guest mashes 'L'
-      if (team === 'push' && (e.key === 'a' || e.key === 'A')) {
+      if (teamRef.current === 'push' && (key === 'a' || code === 'KeyA')) {
+        e.preventDefault()
         handlePullMash()
-      } else if (team === 'pull' && (e.key === 'l' || e.key === 'L')) {
+      } else if (teamRef.current === 'pull' && (key === 'l' || code === 'KeyL')) {
+        e.preventDefault()
         handlePullMash()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [gameState, team, handlePullMash])
+  }, [handlePullMash])
 
   const handleWinnerDeclare = (winSide: 'push' | 'pull') => {
     setWinner(winSide)
