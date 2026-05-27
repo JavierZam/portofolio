@@ -12,5 +12,17 @@ service cloud.firestore {
                     && request.resource.data.message.size() <= 500;
       allow update, delete: if false;
     }
+
+    // Bug Raid: anyone can read/write the boss document
+    match /bug_raid_boss/{docId} {
+      allow read: if true;
+      allow create, update: if true;
+    }
+
+    // Bug Raid: anyone can read, create, and update contributor scores
+    match /bug_raid_contributors/{docId} {
+      allow read: if true;
+      allow create, update: if true;
+    }
   }
 }

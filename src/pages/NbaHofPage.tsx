@@ -225,7 +225,7 @@ function CurryArcade({ soundEnabled }: { soundEnabled: boolean }) {
 
     const updateMeter = () => {
       setMeterValue(prev => {
-        let next = prev + meterDirection.current * 2.5
+        let next = prev + meterDirection.current * 1.2
         if (next >= 100) {
           next = 100
           meterDirection.current = -1
@@ -293,7 +293,7 @@ function CurryArcade({ soundEnabled }: { soundEnabled: boolean }) {
         if (soundEnabled) playSynthSound('clank')
         setStreak(0)
       }
-    }, 700) // Timing fits the shot flight animation
+    }, 800) // Timing fits the shot flight animation
 
     // Reset game state after animation
     setTimeout(() => {
@@ -390,7 +390,8 @@ function CurryArcade({ soundEnabled }: { soundEnabled: boolean }) {
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
 
           {/* Holographic hoop */}
-          <div className="absolute right-8 top-12 flex flex-col items-center">
+          {/* Holographic hoop */}
+          <div className="absolute right-[10%] top-[15%] flex flex-col items-center">
             {/* Backboard */}
             <div className="w-16 h-12 border-2 border-cyan-500/30 bg-slate-950/40 rounded flex items-center justify-center relative">
               <div className="w-8 h-6 border border-cyan-500/40" />
@@ -402,7 +403,7 @@ function CurryArcade({ soundEnabled }: { soundEnabled: boolean }) {
           </div>
 
           {/* Steph Curry Shooter Placeholder Silhouette */}
-          <div className="absolute left-6 bottom-4 flex flex-col items-center">
+          <div className="absolute left-[10%] bottom-[8%] flex flex-col items-center">
             <div className="w-12 h-16 border-2 border-slate-700 bg-slate-900/50 rounded-t-full flex items-center justify-center relative">
               <span className="text-[10px] text-yellow-500 font-bold font-mono">#30</span>
               
@@ -420,12 +421,19 @@ function CurryArcade({ soundEnabled }: { soundEnabled: boolean }) {
           {isShooting && (
             <motion.div 
               className="absolute w-5 h-5 text-lg flex items-center justify-center pointer-events-none"
-              initial={{ x: 36, y: 130 }}
-              animate={{ 
-                x: [36, 120, 208],
-                y: [130, 20, shotResult === 'miss' ? 70 : 86]
-              }}
-              transition={{ duration: 0.7, ease: 'easeOut' }}
+              initial={{ left: "14%", top: "65%" }}
+              animate={
+                shotResult === 'miss' 
+                  ? {
+                      left: ["14%", "50%", "83%", "80%", "79%"],
+                      top: ["65%", "12%", "33%", "25%", "95%"]
+                    }
+                  : {
+                      left: ["14%", "50%", "86.5%"],
+                      top: ["65%", "12%", "37.5%"]
+                    }
+              }
+              transition={{ duration: 0.8, ease: 'easeOut' }}
             >
               🏀
             </motion.div>

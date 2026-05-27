@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy } from 'lucide-react'
+import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy, Bug } from 'lucide-react'
 
 const games = [
   {
@@ -26,6 +26,14 @@ const games = [
     path: '/nba',
     color: 'from-amber-500 to-red-600',
     status: 'Explore Now',
+  },
+  {
+    title: 'Bug Raid: Global Co-op',
+    description: 'Cooperative real-time multiplayer clicker. Choose your dev class and tap to defeat production bugs!',
+    icon: Bug,
+    path: '/games/bug-raid',
+    color: 'from-cyan-500 to-emerald-600',
+    status: 'Join Raid',
   },
 ]
 
@@ -60,7 +68,7 @@ export default function GamesHub() {
         </motion.div>
 
         {/* Game Cards */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {games.map((game, i) => (
             <motion.div
               key={game.title}
