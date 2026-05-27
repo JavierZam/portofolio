@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy, Bug, Terminal } from 'lucide-react'
+import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy, Bug, Terminal, Swords } from 'lucide-react'
 
 const games = [
   {
@@ -42,6 +42,14 @@ const games = [
     path: '/games/dev-race',
     color: 'from-violet-600 to-indigo-600',
     status: 'Race Now',
+  },
+  {
+    title: 'Git Push-of-War',
+    description: 'Multiplayer keyboard mashing duel. Play PUSH vs PULL and pull the commit node to your side!',
+    icon: Swords,
+    path: '/games/git-war',
+    color: 'from-emerald-500 to-cyan-500',
+    status: 'Duel Now',
   },
 ]
 
