@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy, Bug } from 'lucide-react'
+import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy, Bug, Terminal } from 'lucide-react'
 
 const games = [
   {
@@ -35,6 +35,14 @@ const games = [
     color: 'from-cyan-500 to-emerald-600',
     status: 'Join Raid',
   },
+  {
+    title: 'Dev Race: Typing Arena',
+    description: 'Real-time multiplayer coding speed test. Race other players (or bots) to type syntax correctly!',
+    icon: Terminal,
+    path: '/games/dev-race',
+    color: 'from-violet-600 to-indigo-600',
+    status: 'Race Now',
+  },
 ]
 
 export default function GamesHub() {
@@ -68,7 +76,7 @@ export default function GamesHub() {
         </motion.div>
 
         {/* Game Cards */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {games.map((game, i) => (
             <motion.div
               key={game.title}
