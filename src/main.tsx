@@ -9,7 +9,6 @@ import NbaHofPage from './pages/NbaHofPage.tsx'
 import BugRaidPage from './pages/BugRaidPage.tsx'
 import DevRacePage from './pages/DevRacePage.tsx'
 import GitWarPage from './pages/GitWarPage.tsx'
-import ToolsPage from './pages/ToolsPage.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -22,9 +21,8 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/games/bug-raid" element={<BugRaidPage />} />
         <Route path="/games/dev-race" element={<DevRacePage />} />
         <Route path="/games/git-war" element={<GitWarPage />} />
-        <Route path="/tools" element={<ToolsPage />} />
-        <Route path="/tools/yt-downloader" element={<ToolsPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
 )
+

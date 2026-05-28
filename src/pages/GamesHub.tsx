@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy, Bug, Terminal, Swords, Download } from 'lucide-react'
+import { Gamepad2, ArrowLeft, Music, Crosshair, Trophy, Bug, Terminal, Swords } from 'lucide-react'
 
 const games = [
   {
@@ -50,14 +50,6 @@ const games = [
     path: '/games/git-war',
     color: 'from-emerald-500 to-cyan-500',
     status: 'Duel Now',
-  },
-  {
-    title: 'Cyber ytdl',
-    description: 'Online bulk YouTube audio downloader. Convert & download MP3/M4A directly to your device.',
-    icon: Download,
-    path: '/tools/yt-downloader',
-    color: 'from-cyan-500 to-purple-600',
-    status: 'Open Tool',
   },
 ]
 
