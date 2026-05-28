@@ -87,9 +87,12 @@ export default function ToolsPage() {
 
     updateItemStatus(id, { title, author, thumbnail, status: 'converting' })
 
-    // 2. Fetch download link from Cobalt API
+    // 2. Fetch download link from Cobalt API via CORS Proxy
     try {
-      const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+      const targetUrl = 'https://api.cobalt.tools/api/json'
+      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`
+
+      const cobaltRes = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
