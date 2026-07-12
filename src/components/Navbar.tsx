@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Gamepad2, Trophy } from 'lucide-react'
+import { Menu, X, Gamepad2 } from 'lucide-react'
 import { PORTFOLIO } from '../config/portfolio'
 
 const navItems = [
@@ -80,18 +79,6 @@ export default function Navbar({ onSecretClick, secretClickCount }: NavbarProps)
               </motion.span>
             )}
           </motion.button>
-
-          {/* NBA HOF Link */}
-          <Link to="/nba">
-            <motion.button
-              className="ml-2 p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-neon-yellow)] transition-colors relative"
-              whileHover={{ scale: 1.2, rotate: -15 }}
-              whileTap={{ scale: 0.9 }}
-              title="NBA Hall of Fame"
-            >
-              <Trophy size={18} />
-            </motion.button>
-          </Link>
         </div>
 
         {/* Mobile Toggle */}
@@ -129,13 +116,6 @@ export default function Navbar({ onSecretClick, secretClickCount }: NavbarProps)
               >
                 <Gamepad2 size={18} /> <span className="text-sm">???</span>
               </button>
-              <Link
-                to="/nba"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 px-4 py-3 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-neon-yellow)] transition-colors w-full"
-              >
-                <Trophy size={18} /> <span className="text-sm">NBA Stats & Arcade</span>
-              </Link>
             </div>
           </motion.div>
         )}
