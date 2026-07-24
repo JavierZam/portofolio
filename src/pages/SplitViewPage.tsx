@@ -1,752 +1,697 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  ArrowLeft, Columns2, ArrowLeftRight, Maximize2, Minimize2, RotateCcw, 
-  TrendingUp, Activity, Terminal as TerminalIcon, FileCode, Upload, 
-  ChevronRight, Play, RefreshCw, CheckCircle2, AlertTriangle, FileText,
-  Search, ShieldCheck, Database, Layers, Sparkles, X
+  ArrowLeft, Chrome, Radio, Zap, Sparkles, Send, MoveRight, 
+  TrendingUp, BarChart2, Cpu, CheckCircle2, RefreshCw, Shield, Layers, Eye
 } from 'lucide-react'
 
-/* ─── Mock Data for Stock & IPO Analyzer ───────────────── */
+/* ─── Shared Types & Data ─────────────────────────────── */
 
-const STOCK_DATA: Record<string, {
+interface StockItem {
+  ticker: string
   name: string
   price: string
   change: string
   isUp: boolean
   pe: string
-  pbv: string
   marketCap: string
-  brokerNet: string
-  aiVerdict: string
-  chartData: number[]
-}> = {
-  'BBCA.JK': {
+  broker: string
+  aiSignal: string
+  color: string
+}
+
+const STOCKS: StockItem[] = [
+  {
+    ticker: 'BBCA.JK',
     name: 'PT Bank Central Asia Tbk',
     price: 'Rp 10,250',
     change: '+1.75%',
     isUp: true,
     pe: '24.2x',
-    pbv: '4.8x',
     marketCap: 'Rp 1,263 T',
-    brokerNet: '+Rp 142.5 B (AK, ZP, BK)',
-    aiVerdict: 'STRONG BUY (Solid Fundamentals)',
-    chartData: [40, 45, 42, 58, 62, 55, 70, 78, 85, 92],
+    broker: 'AK, ZP, BK (Net Buy)',
+    aiSignal: 'BULLISH • Solid Banking Growth',
+    color: '#10b981',
   },
-  'GOTO.JK': {
+  {
+    ticker: 'GOTO.JK',
     name: 'GoTo Gojek Tokopedia Tbk',
     price: 'Rp 64',
     change: '-3.03%',
     isUp: false,
     pe: '-12.4x',
-    pbv: '0.7x',
     marketCap: 'Rp 76.8 T',
-    brokerNet: '-Rp 28.4 B (OD, CC, YU)',
-    aiVerdict: 'HOLD (Wait for Ebitda Turnaround)',
-    chartData: [80, 75, 60, 65, 50, 45, 52, 48, 42, 38],
+    broker: 'OD, CC (Net Sell)',
+    aiSignal: 'NEUTRAL • Ebitda Turning Point',
+    color: '#ef4444',
   },
-  'AMMN.JK': {
-    name: 'Amman Mineral Internasional Tbk',
+  {
+    ticker: 'AMMN.JK',
+    name: 'Amman Mineral Internasional',
     price: 'Rp 11,800',
     change: '+4.42%',
     isUp: true,
     pe: '38.6x',
-    pbv: '7.1x',
     marketCap: 'Rp 854 T',
-    brokerNet: '+Rp 89.2 B (CS, AG, RX)',
-    aiVerdict: 'BUY ON BREAKOUT (Copper Surge)',
-    chartData: [30, 38, 45, 42, 60, 72, 68, 84, 90, 98],
+    broker: 'CS, AG (Net Buy)',
+    aiSignal: 'STRONG BUY • Copper Surge',
+    color: '#3b82f6',
   },
-  'IPO_TECH': {
-    name: 'PT Cyber Cloud Nusantara (IPO Draft)',
-    price: 'Rp 280 (Offer)',
+  {
+    ticker: 'IPO_CYBER',
+    name: 'PT Cyber Cloud Nusantara (IPO)',
+    price: 'Rp 280',
     change: 'NEW IPO',
     isUp: true,
     pe: '18.5x',
-    pbv: '2.3x',
     marketCap: 'Rp 420 B',
-    brokerNet: 'Underwriter: PT Mandiri Sekuritas',
-    aiVerdict: 'OVERSUBSCRIBED (High Growth Sector)',
-    chartData: [20, 25, 35, 50, 65, 80, 95, 110, 125, 140],
+    broker: 'Mandiri Sekuritas (UW)',
+    aiSignal: 'OVERSUBSCRIBED • High Cloud Growth',
+    color: '#a855f7',
   },
-}
+]
 
-/* ─── MODULE 1: Stock & IPO Analyzer ──────────────────── */
+/* ─── 3D WebGL / Canvas Background Emitter ────────────── */
 
-function StockAnalyzerModule() {
-  const [selectedStock, setSelectedStock] = useState('BBCA.JK')
-  const [importedFile, setImportedFile] = useState<string | null>(null)
-  const [isParsing, setIsParsing] = useState(false)
-  const stock = STOCK_DATA[selectedStock]
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setIsParsing(true)
-      setTimeout(() => {
-        setImportedFile(file.name)
-        setIsParsing(false)
-        setSelectedStock('IPO_TECH')
-      }, 1200)
-    }
-  }
-
-  return (
-    <div style={{ padding: '20px', height: '100%', boxSizing: 'border-box', overflowY: 'auto', color: '#e4e4e7', fontFamily: "'Inter', sans-serif" }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TrendingUp size={20} color="#10b981" />
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Stock & IPO Intelligence</h3>
-        </div>
-        <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-          AI PDF Parser Ready
-        </span>
-      </div>
-
-      {/* Stock Ticker Buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        {Object.keys(STOCK_DATA).map(ticker => (
-          <button
-            key={ticker}
-            onClick={() => setSelectedStock(ticker)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              background: selectedStock === ticker ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-              border: selectedStock === ticker ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
-              color: selectedStock === ticker ? '#c084fc' : '#a1a1aa',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            {ticker}
-          </button>
-        ))}
-      </div>
-
-      {/* PDF Import Drag Box */}
-      <div
-        style={{
-          border: '1.5px dashed rgba(255, 255, 255, 0.15)',
-          borderRadius: '12px',
-          padding: '16px',
-          textAlign: 'center',
-          background: 'rgba(255, 255, 255, 0.02)',
-          marginBottom: '20px',
-          position: 'relative',
-        }}
-      >
-        <input
-          type="file"
-          accept=".pdf,.json,.csv"
-          onChange={handleFileUpload}
-          style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-        />
-        <Upload size={22} color="#a855f7" style={{ margin: '0 auto 6px' }} />
-        <div style={{ fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
-          {isParsing ? 'Parsing Broker Prospectus PDF...' : importedFile ? `Imported: ${importedFile}` : 'Drop Broker Prospectus / IPO PDF here'}
-        </div>
-        <div style={{ fontSize: '11px', color: '#71717a', marginTop: '2px' }}>
-          Supports Mandiri Sekuritas, Stockbit, & IDX Prospectus PDF
-        </div>
-      </div>
-
-      {/* Selected Stock Overview Card */}
-      <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-          <div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>{selectedStock}</div>
-            <div style={{ fontSize: '12px', color: '#71717a' }}>{stock.name}</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>{stock.price}</div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: stock.isUp ? '#34d399' : '#f87171' }}>{stock.change}</div>
-          </div>
-        </div>
-
-        {/* AI Verdict */}
-        <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.2)', fontSize: '12px', color: '#c084fc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Sparkles size={14} />
-          <span>AI Insight: {stock.aiVerdict}</span>
-        </div>
-      </div>
-
-      {/* Sparkline Chart */}
-      <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '16px' }}>
-        <div style={{ fontSize: '12px', color: '#a1a1aa', fontWeight: 600, marginBottom: '12px' }}>Price Momentum Trend</div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '90px' }}>
-          {stock.chartData.map((val, idx) => (
-            <div
-              key={idx}
-              style={{
-                flex: 1,
-                height: `${val}%`,
-                background: stock.isUp ? 'linear-gradient(to top, #059669, #34d399)' : 'linear-gradient(to top, #dc2626, #f87171)',
-                borderRadius: '4px 4px 0 0',
-                transition: 'height 0.4s ease',
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Valuation Metrics Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-        <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '11px', color: '#71717a' }}>P/E Ratio</div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>{stock.pe}</div>
-        </div>
-        <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '11px', color: '#71717a' }}>P/BV Ratio</div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>{stock.pbv}</div>
-        </div>
-        <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '11px', color: '#71717a' }}>Market Cap</div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>{stock.marketCap}</div>
-        </div>
-        <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '11px', color: '#71717a' }}>Broker Summary</div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#34d399' }}>{stock.brokerNet}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ─── MODULE 2: GCP Live Cloud Run Console ────────────── */
-
-function GcpCloudModule() {
-  const [method, setMethod] = useState('GET')
-  const [endpoint, setEndpoint] = useState('/api/v1/stocks/BBCA.JK')
-  const [status, setStatus] = useState(200)
-  const [latency, setLatency] = useState(42)
-  const [jsonResponse, setJsonResponse] = useState<string>(
-    JSON.stringify({
-      symbol: 'BBCA.JK',
-      status: 'ACTIVE',
-      last_price: 10250,
-      currency: 'IDR',
-      gcp_cluster: 'asia-southeast2-a',
-      cloud_run_revision: 'stock-api-00042-xyz',
-      cached_in_redis: true,
-      timestamp: new Date().toISOString(),
-    }, null, 2)
-  )
-
-  const handleTestApi = () => {
-    setLatency(Math.floor(Math.random() * 30) + 15)
-    const codes = [200, 200, 200, 201, 429]
-    const chosenStatus = codes[Math.floor(Math.random() * codes.length)]
-    setStatus(chosenStatus)
-
-    setJsonResponse(
-      JSON.stringify({
-        endpoint: endpoint,
-        status_code: chosenStatus,
-        executed_at: new Date().toISOString(),
-        latency_ms: latency,
-        data: {
-          gcp_project: 'javier-cloud-prod',
-          instance: 'cloud-run-worker-01',
-          uptime: '99.99%',
-        }
-      }, null, 2)
-    )
-  }
-
-  return (
-    <div style={{ padding: '20px', height: '100%', boxSizing: 'border-box', overflowY: 'auto', color: '#e4e4e7', fontFamily: "'JetBrains Mono', monospace" }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={20} color="#38bdf8" />
-          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>GCP Cloud Run API Console</h3>
-        </div>
-        <span style={{ fontSize: '11px', color: '#38bdf8', padding: '2px 8px', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '12px' }}>
-          asia-southeast2 (Jakarta)
-        </span>
-      </div>
-
-      {/* Microservice Health Indicators */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
-        <div style={{ padding: '10px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '10px', color: '#71717a' }}>Requests/sec</div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#34d399' }}>1,240 req/s</div>
-        </div>
-        <div style={{ padding: '10px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '10px', color: '#71717a' }}>Latency</div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#38bdf8' }}>{latency} ms</div>
-        </div>
-        <div style={{ padding: '10px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div style={{ fontSize: '10px', color: '#71717a' }}>HTTP Status</div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: status === 200 ? '#34d399' : '#f87171' }}>{status} OK</div>
-        </div>
-      </div>
-
-      {/* API Tester Bar */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        <select
-          value={method}
-          onChange={e => setMethod(e.target.value)}
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#34d399',
-            padding: '8px',
-            borderRadius: '8px',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '12px',
-            fontWeight: 700,
-          }}
-        >
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-        </select>
-        <input
-          type="text"
-          value={endpoint}
-          onChange={e => setEndpoint(e.target.value)}
-          style={{
-            flex: 1,
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#ffffff',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '12px',
-            outline: 'none',
-          }}
-        />
-        <button
-          onClick={handleTestApi}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            background: '#0284c7',
-            color: '#ffffff',
-            border: 'none',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '12px',
-          }}
-        >
-          <Play size={12} /> Send
-        </button>
-      </div>
-
-      {/* JSON Viewer */}
-      <div style={{ borderRadius: '10px', background: '#070a12', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '14px', overflowX: 'auto' }}>
-        <div style={{ fontSize: '11px', color: '#71717a', marginBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', paddingBottom: '6px' }}>
-          RESPONSE PAYLOAD (application/json)
-        </div>
-        <pre style={{ margin: 0, fontSize: '12px', color: '#a5f3fc', lineHeight: 1.5 }}>
-          {jsonResponse}
-        </pre>
-      </div>
-    </div>
-  )
-}
-
-/* ─── MODULE 3: Code & JSON Transformer ────────────────── */
-
-function CodeTransformerModule() {
-  const [rawJson, setRawJson] = useState(`{\n  "broker": "Mandiri Sekuritas",\n  "target_price": 12500,\n  "recommendation": "BUY"\n}`)
-  const [outputFormat, setOutputFormat] = useState<'ts' | 'golang' | 'minified'>('ts')
-
-  const getTransformed = () => {
-    try {
-      const parsed = JSON.parse(rawJson)
-      if (outputFormat === 'minified') {
-        return JSON.stringify(parsed)
-      } else if (outputFormat === 'golang') {
-        return `type StockReport struct {\n` +
-          Object.keys(parsed).map(k => `  ${k.toUpperCase()} interface{} \`json:"${k}"\``).join('\n') +
-          `\n}`
-      } else {
-        return `export interface StockReport {\n` +
-          Object.keys(parsed).map(k => `  ${k}: ${typeof parsed[k]};`).join('\n') +
-          `\n}`
-      }
-    } catch {
-      return '// Invalid JSON Syntax'
-    }
-  }
-
-  return (
-    <div style={{ padding: '20px', height: '100%', boxSizing: 'border-box', overflowY: 'auto', color: '#e4e4e7', fontFamily: "'JetBrains Mono', monospace" }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <FileCode size={20} color="#f43f5e" />
-          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Schema Transformer</h3>
-        </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {(['ts', 'golang', 'minified'] as const).map(fmt => (
-            <button
-              key={fmt}
-              onClick={() => setOutputFormat(fmt)}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '6px',
-                background: outputFormat === fmt ? 'rgba(244, 63, 94, 0.2)' : 'transparent',
-                border: '1px solid rgba(244, 63, 94, 0.3)',
-                color: '#fda4af',
-                fontSize: '10px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              {fmt.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', height: 'calc(100% - 60px)' }}>
-        <div>
-          <div style={{ fontSize: '11px', color: '#71717a', marginBottom: '6px' }}>INPUT JSON</div>
-          <textarea
-            value={rawJson}
-            onChange={e => setRawJson(e.target.value)}
-            style={{
-              width: '100%',
-              height: '240px',
-              background: '#080c14',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              color: '#34d399',
-              padding: '12px',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '12px',
-              outline: 'none',
-              resize: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-        <div>
-          <div style={{ fontSize: '11px', color: '#71717a', marginBottom: '6px' }}>GENERATED TYPE / OUTPUT</div>
-          <div style={{ height: '240px', background: '#080c14', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', padding: '12px', color: '#fda4af', overflow: 'auto', fontSize: '12px', boxSizing: 'border-box' }}>
-            <pre style={{ margin: 0 }}>{getTransformed()}</pre>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ─── MODULE 4: Real-time System Logs ─────────────────── */
-
-function LogsModule() {
-  const [logs, setLogs] = useState<string[]>([
-    '[SYSTEM] GCP Cloud Run worker spawned in asia-southeast2',
-    '[INFO] Worker connected to Firestore cluster',
-    '[SUCCESS] Stock data index synchronized for BBCA.JK',
-    '[INFO] Broker PDF parsing queue idle',
-  ])
+function CrossTabCanvas3D({ 
+  laserY, 
+  tabRole 
+}: { 
+  laserY: number | null; 
+  tabRole: 'LEFT' | 'RIGHT' 
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const sample = [
-        `[METRIC] Latency check: ${Math.floor(Math.random() * 20) + 15}ms OK`,
-        `[CACHE] Redis key 'stock_bbca' hit count: ${Math.floor(Math.random() * 500) + 100}`,
-        `[CRON] Auto-fetch IDX broker summary completed`,
-        `[HEALTH] Service status 200 OK`,
-      ]
-      const log = sample[Math.floor(Math.random() * sample.length)]
-      setLogs(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()} ${log}`])
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let animId: number
+    let width = (canvas.width = window.innerWidth)
+    let height = (canvas.height = window.innerHeight)
+
+    const handleResize = () => {
+      if (!canvas) return
+      width = canvas.width = window.innerWidth
+      height = canvas.height = window.innerHeight
+    }
+    window.addEventListener('resize', handleResize)
+
+    // 3D Particles
+    const particles = Array.from({ length: 45 }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      z: Math.random() * 2 + 0.5,
+      radius: Math.random() * 2 + 1,
+      vx: (Math.random() - 0.5) * 1.5,
+      vy: (Math.random() - 0.5) * 1.5,
+      color: tabRole === 'LEFT' ? 'rgba(0, 255, 102, ' : 'rgba(168, 85, 247, ',
+    }))
+
+    const render = () => {
+      ctx.clearRect(0, 0, width, height)
+
+      // Draw Grid Lines (Perspective 3D floor)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)'
+      ctx.lineWidth = 1
+      for (let x = 0; x < width; x += 60) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, height)
+        ctx.stroke()
+      }
+      for (let y = 0; y < height; y += 60) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(width, y)
+        ctx.stroke()
+      }
+
+      // Draw 3D Particles
+      particles.forEach(p => {
+        p.x += p.vx
+        p.y += p.vy
+        if (p.x < 0) p.x = width
+        if (p.x > width) p.x = 0
+        if (p.y < 0) p.y = height
+        if (p.y > height) p.y = 0
+
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.radius * p.z, 0, Math.PI * 2)
+        ctx.fillStyle = `${p.color}${0.3 * p.z})`
+        ctx.fill()
+      })
+
+      // Draw Cross-Tab Laser Beam Connection if mouse is active
+      if (laserY !== null) {
+        ctx.save()
+        const gradient = ctx.createLinearGradient(
+          tabRole === 'LEFT' ? width - 200 : 0,
+          laserY,
+          tabRole === 'LEFT' ? width : 200,
+          laserY
+        )
+
+        if (tabRole === 'LEFT') {
+          gradient.addColorStop(0, 'rgba(0, 255, 102, 0)')
+          gradient.addColorStop(1, 'rgba(0, 255, 102, 0.9)')
+        } else {
+          gradient.addColorStop(0, 'rgba(168, 85, 247, 0.9)')
+          gradient.addColorStop(1, 'rgba(168, 85, 247, 0)')
+        }
+
+        ctx.strokeStyle = gradient
+        ctx.lineWidth = 4
+        ctx.shadowBlur = 15
+        ctx.shadowColor = tabRole === 'LEFT' ? '#00ff66' : '#a855f7'
+
+        ctx.beginPath()
+        ctx.moveTo(tabRole === 'LEFT' ? width - 300 : 0, laserY)
+        ctx.lineTo(tabRole === 'LEFT' ? width : 300, laserY)
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      animId = requestAnimationFrame(render)
+    }
+
+    render()
+
+    return () => {
+      cancelAnimationFrame(animId)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [laserY, tabRole])
 
   return (
-    <div style={{ padding: '20px', height: '100%', boxSizing: 'border-box', overflowY: 'auto', color: '#e4e4e7', fontFamily: "'JetBrains Mono', monospace" }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TerminalIcon size={20} color="#fbbf24" />
-          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#ffffff' }}>Live Cloud Telemetry</h3>
-        </div>
-        <span style={{ fontSize: '11px', color: '#fbbf24', padding: '2px 8px', background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '12px' }}>
-          LIVE STREAM
-        </span>
-      </div>
-
-      <div style={{ background: '#05070f', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '16px', minHeight: '300px' }}>
-        {logs.map((l, i) => (
-          <div key={i} style={{ fontSize: '12px', lineHeight: 1.7, color: l.includes('SUCCESS') ? '#34d399' : l.includes('METRIC') ? '#38bdf8' : '#fbbf24' }}>
-            {l}
-          </div>
-        ))}
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    />
   )
 }
 
-/* ─── MAIN SPLIT VIEW PAGE COMPONENT ──────────────────── */
+/* ─── MAIN PAGE COMPONENT ─────────────────────────────── */
 
 export default function SplitViewPage() {
-  const [splitRatio, setSplitRatio] = useState(50) // percentage for left pane
-  const [leftModule, setLeftModule] = useState<'stock' | 'gcp' | 'code' | 'logs'>('stock')
-  const [rightModule, setRightModule] = useState<'stock' | 'gcp' | 'code' | 'logs'>('gcp')
-  const [focusedPane, setFocusedPane] = useState<'both' | 'left' | 'right'>('both')
+  const [tabId] = useState(() => Math.random().toString(36).substring(7))
+  const [channel, setChannel] = useState<BroadcastChannel | null>(null)
+  const [connectedTabsCount, setConnectedTabsCount] = useState(1)
+  const [tabRole, setTabRole] = useState<'LEFT' | 'RIGHT'>('LEFT')
 
-  const isDragging = useRef(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  // Shared Cross-Tab Sync States
+  const [selectedStock, setSelectedStock] = useState<StockItem>(STOCKS[0])
+  const [teleportedCards, setTeleportedCards] = useState<StockItem[]>([])
+  const [laserY, setLaserY] = useState<number | null>(null)
+  const [activeBeamAnim, setActiveBeamAnim] = useState(false)
+  const [lastActionLog, setLastActionLog] = useState<string>('Ready for Chrome Split View sync')
 
-  const handleSwap = () => {
-    const temp = leftModule
-    setLeftModule(rightModule)
-    setRightModule(temp)
+  // Initialize BroadcastChannel for Chrome Multi-Tab / Split View Sync
+  useEffect(() => {
+    const bc = new BroadcastChannel('chrome_split_view_sync')
+    setChannel(bc)
+
+    // Register this tab
+    bc.postMessage({ type: 'TAB_JOINED', tabId })
+
+    bc.onmessage = (event) => {
+      const { type, senderId, payload } = event.data
+      if (senderId === tabId) return
+
+      if (type === 'TAB_JOINED') {
+        setConnectedTabsCount(2)
+        // Auto assign roles: older tab is LEFT, new tab is RIGHT
+        bc.postMessage({ type: 'ROLE_ASSIGN', senderId: tabId, payload: { role: 'RIGHT', forTab: payload?.tabId } })
+        setTabRole('LEFT')
+        setLastActionLog('Chrome Split View connected! (2 Tabs active)')
+      }
+
+      if (type === 'ROLE_ASSIGN' && payload?.forTab === tabId) {
+        setTabRole(payload.role)
+        setConnectedTabsCount(2)
+      }
+
+      if (type === 'MOUSE_BEAM') {
+        setLaserY(payload.y)
+      }
+
+      if (type === 'SELECT_STOCK') {
+        setSelectedStock(payload.stock)
+        setLastActionLog(`Received Stock Sync: ${payload.stock.ticker}`)
+      }
+
+      if (type === 'TELEPORT_CARD') {
+        setTeleportedCards(prev => [payload.stock, ...prev])
+        setActiveBeamAnim(true)
+        setTimeout(() => setActiveBeamAnim(false), 1500)
+        setLastActionLog(`3D Teleported ${payload.stock.ticker} into Right View!`)
+      }
+
+      if (type === 'CLEAR_TELEPORT') {
+        setTeleportedCards([])
+      }
+    }
+
+    return () => {
+      bc.postMessage({ type: 'TAB_LEFT', tabId })
+      bc.close()
+    }
+  }, [tabId])
+
+  // Mouse Move Broadcast
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    setLaserY(e.clientY)
+    if (channel) {
+      channel.postMessage({
+        type: 'MOUSE_BEAM',
+        senderId: tabId,
+        payload: { y: e.clientY },
+      })
+    }
+  }, [channel, tabId])
+
+  // Handle Stock Select & Broadcast
+  const handleSelectStock = (stock: StockItem) => {
+    setSelectedStock(stock)
+    setLastActionLog(`Selected Stock: ${stock.ticker}`)
+    if (channel) {
+      channel.postMessage({
+        type: 'SELECT_STOCK',
+        senderId: tabId,
+        payload: { stock },
+      })
+    }
   }
 
-  const handleMove = useCallback((clientX: number) => {
-    if (!isDragging.current || !containerRef.current) return
-    const rect = containerRef.current.getBoundingClientRect()
-    const x = clientX - rect.left
-    const pct = Math.max(15, Math.min(85, (x / rect.width) * 100))
-    setSplitRatio(pct)
-  }, [])
+  // Handle 3D Teleport Card to Right Tab
+  const handleTeleportCard = (stock: StockItem) => {
+    setActiveBeamAnim(true)
+    setTimeout(() => setActiveBeamAnim(false), 1500)
+    setLastActionLog(`Teleporting 3D Card: ${stock.ticker} ➔ Right Tab`)
 
-  const handleMouseDown = () => { isDragging.current = true }
-  const handleMouseUp = () => { isDragging.current = false }
-
-  const handleMouseMove = useCallback((e: MouseEvent) => handleMove(e.clientX), [handleMove])
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (e.touches.length > 0) handleMove(e.touches[0].clientX)
-  }, [handleMove])
-
-  useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-    window.addEventListener('touchmove', handleTouchMove, { passive: true })
-    window.addEventListener('touchend', handleMouseUp)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-      window.removeEventListener('touchmove', handleTouchMove)
+    if (channel) {
+      channel.postMessage({
+        type: 'TELEPORT_CARD',
+        senderId: tabId,
+        payload: { stock },
+      })
     }
-  }, [handleMouseMove, handleTouchMove])
+  }
 
-  const renderModule = (mod: 'stock' | 'gcp' | 'code' | 'logs') => {
-    switch (mod) {
-      case 'stock': return <StockAnalyzerModule />
-      case 'gcp': return <GcpCloudModule />
-      case 'code': return <CodeTransformerModule />
-      case 'logs': return <LogsModule />
+  const handleClearTeleport = () => {
+    setTeleportedCards([])
+    if (channel) {
+      channel.postMessage({ type: 'CLEAR_TELEPORT', senderId: tabId })
     }
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', backgroundColor: '#05070e', overflow: 'hidden', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
-      
-      {/* ── CHROME SPLIT VIEW INSPIRED ACTION BAR (Top Header) ── */}
+    <div
+      onMouseMove={handleMouseMove}
+      style={{
+        width: '100vw',
+        minHeight: '100vh',
+        backgroundColor: '#05070e',
+        color: '#ffffff',
+        fontFamily: "'Inter', system-ui, sans-serif",
+        position: 'relative',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
+      }}
+    >
+      {/* 3D Canvas Background Beam */}
+      <CrossTabCanvas3D laserY={laserY} tabRole={tabRole} />
+
+      {/* ── TOP HEADER CONTROL BAR ── */}
       <header
         style={{
-          height: '52px',
-          background: '#090d16',
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          background: 'rgba(9, 13, 22, 0.85)',
+          backdropFilter: 'blur(16px)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 16px',
-          zIndex: 50,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <Link to="/labs" style={{ color: '#a1a1aa', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
+          <Link
+            to="/labs"
+            style={{
+              color: '#a1a1aa',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}
+          >
             <ArrowLeft size={16} /> DevLabs
           </Link>
-          <div style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.1)' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontSize: '14px', fontWeight: 700 }}>
-            <Columns2 size={18} color="#a855f7" />
-            <span>Chrome Split View Lab</span>
+          <div style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.12)' }} />
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Chrome size={18} color="#a855f7" />
+            <span style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.5px' }}>
+              Chrome Split View Dual-Tab Sync
+            </span>
           </div>
         </div>
 
-        {/* Chrome Split View Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Multi-Tab Connection Status Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              background: connectedTabsCount > 1 ? 'rgba(0, 255, 102, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+              border: connectedTabsCount > 1 ? '1px solid rgba(0, 255, 102, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: connectedTabsCount > 1 ? '#00ff66' : '#eab308',
+            }}
+          >
+            <Radio size={14} className={connectedTabsCount > 1 ? 'animate-pulse' : ''} />
+            <span>
+              {connectedTabsCount > 1 
+                ? `Chrome Split Active (${tabRole} TAB)` 
+                : 'Single Tab (Open Chrome Split View to Sync)'}
+            </span>
+          </div>
+
+          {/* Role Toggle Button */}
           <button
-            onClick={handleSwap}
-            title="Reverse Views (Swap Left & Right)"
+            onClick={() => setTabRole(r => r === 'LEFT' ? 'RIGHT' : 'LEFT')}
             style={{
               padding: '6px 12px',
               borderRadius: '8px',
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               color: '#ffffff',
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: 600,
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
             }}
           >
-            <ArrowLeftRight size={14} /> Reverse Views
-          </button>
-
-          <div style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.1)' }} />
-
-          <button
-            onClick={() => setFocusedPane('left')}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '8px',
-              background: focusedPane === 'left' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#ffffff',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            Focus Left
-          </button>
-          <button
-            onClick={() => setFocusedPane('both')}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '8px',
-              background: focusedPane === 'both' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#ffffff',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            Split (50:50)
-          </button>
-          <button
-            onClick={() => setFocusedPane('right')}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '8px',
-              background: focusedPane === 'right' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#ffffff',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            Focus Right
+            Switch Role: {tabRole}
           </button>
         </div>
       </header>
 
-      {/* ── DUAL PANE WORKSPACE ── */}
+      {/* ── INSTRUCTION / ANNOUNCEMENT BANNER ── */}
       <div
-        ref={containerRef}
         style={{
-          flex: 1,
+          background: tabRole === 'LEFT' ? 'rgba(0, 255, 102, 0.05)' : 'rgba(168, 85, 247, 0.05)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          padding: '10px 24px',
+          fontSize: '12px',
           display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          color: '#a1a1aa',
           position: 'relative',
-          overflow: 'hidden',
+          zIndex: 10,
         }}
       >
-        {/* LEFT PANE */}
-        {(focusedPane === 'both' || focusedPane === 'left') && (
-          <div
-            style={{
-              width: focusedPane === 'left' ? '100%' : `${splitRatio}%`,
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              borderRight: focusedPane === 'both' ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
-              background: '#060911',
-            }}
-          >
-            {/* Left Selector Bar */}
-            <div style={{ padding: '8px 16px', background: '#0c101c', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', gap: '8px' }}>
-              {(['stock', 'gcp', 'code', 'logs'] as const).map(mod => (
-                <button
-                  key={mod}
-                  onClick={() => setLeftModule(mod)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Zap size={14} color={tabRole === 'LEFT' ? '#00ff66' : '#a855f7'} />
+          <span>
+            {tabRole === 'LEFT' ? (
+              <span>
+                <strong style={{ color: '#00ff66' }}>LEFT TAB (CONTROLLER):</strong> Select stocks or click <strong>&quot;Beam 3D Card to Right View ➔&quot;</strong> to teleport objects across Chrome tabs!
+              </span>
+            ) : (
+              <span>
+                <strong style={{ color: '#a855f7' }}>RIGHT TAB (3D STAGE):</strong> Receiving real-time 3D telemetry, laser beam & teleported cards from Left Tab!
+              </span>
+            )}
+          </span>
+        </div>
+
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#71717a' }}>
+          {lastActionLog}
+        </div>
+      </div>
+
+      {/* ── MAIN CONTENT AREA ── */}
+      <div
+        style={{
+          maxWidth: '1100px',
+          margin: '0 auto',
+          padding: '40px 24px',
+          position: 'relative',
+          zIndex: 10,
+        }}
+      >
+        {/* Render Tab Role Specific View */}
+        {tabRole === 'LEFT' ? (
+          /* ─── LEFT TAB VIEW: Controller & Emitter ─── */
+          <div>
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#00ff66', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px', fontFamily: "'JetBrains Mono', monospace" }}>
+                ⚡ CHROME SPLIT VIEW • CONTROLLER STAGE
+              </div>
+              <h1 style={{ fontSize: '36px', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-1px' }}>
+                Select & Beam 3D Assets Across Chrome Tabs
+              </h1>
+              <p style={{ fontSize: '14px', color: '#a1a1aa', margin: 0, maxWidth: '650px', lineHeight: 1.6 }}>
+                Open this exact URL in Chrome&apos;s native Split View (Right Tab). Whatever you click or drag here will trigger 3D teleportation and live sync on the right screen!
+              </p>
+            </div>
+
+            {/* Stock Cards Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '40px' }}>
+              {STOCKS.map(stock => {
+                const isSelected = selectedStock.ticker === stock.ticker
+                return (
+                  <motion.div
+                    key={stock.ticker}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => handleSelectStock(stock)}
+                    style={{
+                      padding: '24px',
+                      borderRadius: '16px',
+                      background: isSelected ? 'rgba(0, 255, 102, 0.06)' : 'rgba(255, 255, 255, 0.03)',
+                      border: isSelected ? '1.5px solid #00ff66' : '1px solid rgba(255, 255, 255, 0.08)',
+                      cursor: 'pointer',
+                      boxShadow: isSelected ? '0 0 30px rgba(0, 255, 102, 0.15)' : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>{stock.ticker}</div>
+                        <div style={{ fontSize: '12px', color: '#71717a' }}>{stock.name}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>{stock.price}</div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: stock.isUp ? '#34d399' : '#f87171' }}>{stock.change}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '16px', lineHeight: 1.5 }}>
+                      <div>P/E: <strong>{stock.pe}</strong> • Cap: <strong>{stock.marketCap}</strong></div>
+                      <div>Broker: <strong>{stock.broker}</strong></div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleTeleportCard(stock)
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #059669, #10b981)',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                      }}
+                    >
+                      <span>Beam 3D Card to Right View</span>
+                      <MoveRight size={14} />
+                    </button>
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            {/* Active Beam Laser Animation Alert */}
+            <AnimatePresence>
+              {activeBeamAnim && (
+                <motion.div
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 100 }}
                   style={{
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    background: leftModule === mod ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
-                    border: leftModule === mod ? '1px solid rgba(168, 85, 247, 0.4)' : 'none',
-                    color: leftModule === mod ? '#c084fc' : '#71717a',
-                    fontSize: '11px',
+                    position: 'fixed',
+                    bottom: '30px',
+                    right: '30px',
+                    padding: '14px 24px',
+                    borderRadius: '16px',
+                    background: 'rgba(0, 255, 102, 0.2)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid #00ff66',
+                    boxShadow: '0 0 40px rgba(0, 255, 102, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    color: '#00ff66',
                     fontWeight: 700,
-                    cursor: 'pointer',
-                    textTransform: 'uppercase',
+                    fontSize: '14px',
+                    zIndex: 100,
                   }}
                 >
-                  {mod}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              {renderModule(leftModule)}
-            </div>
+                  <Sparkles className="animate-spin" size={20} />
+                  <span>3D Energy Beam Dispatched ➔ Emerging on Right Chrome Tab!</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        )}
+        ) : (
+          /* ─── RIGHT TAB VIEW: 3D Holographic Stage ─── */
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#a855f7', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px', fontFamily: "'JetBrains Mono', monospace" }}>
+                  🔮 CHROME SPLIT VIEW • 3D HOLOGRAPHIC RECEIVER
+                </div>
+                <h1 style={{ fontSize: '36px', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-1px' }}>
+                  Live 3D Telemetry & Asset Receptor
+                </h1>
+                <p style={{ fontSize: '14px', color: '#a1a1aa', margin: 0, maxWidth: '600px', lineHeight: 1.6 }}>
+                  Receiving real-time 3D data streams from the Left Chrome Tab! Any stock selected or beamed will materialize here with 3D animation.
+                </p>
+              </div>
 
-        {/* DRAGGABLE RESIZER BAR */}
-        {focusedPane === 'both' && (
-          <div
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleMouseDown}
-            style={{
-              width: '10px',
-              margin: '0 -5px',
-              height: '100%',
-              cursor: 'col-resize',
-              zIndex: 30,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <div style={{ width: '2px', height: '100%', background: 'rgba(168, 85, 247, 0.4)' }} />
-          </div>
-        )}
-
-        {/* RIGHT PANE */}
-        {(focusedPane === 'both' || focusedPane === 'right') && (
-          <div
-            style={{
-              width: focusedPane === 'right' ? '100%' : `${100 - splitRatio}%`,
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              background: '#060812',
-            }}
-          >
-            {/* Right Selector Bar */}
-            <div style={{ padding: '8px 16px', background: '#0b0d1a', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', gap: '8px' }}>
-              {(['stock', 'gcp', 'code', 'logs'] as const).map(mod => (
+              {teleportedCards.length > 0 && (
                 <button
-                  key={mod}
-                  onClick={() => setRightModule(mod)}
+                  onClick={handleClearTeleport}
                   style={{
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    background: rightModule === mod ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
-                    border: rightModule === mod ? '1px solid rgba(56, 189, 248, 0.4)' : 'none',
-                    color: rightModule === mod ? '#38bdf8' : '#71717a',
-                    fontSize: '11px',
-                    fontWeight: 700,
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#a1a1aa',
+                    fontSize: '12px',
                     cursor: 'pointer',
-                    textTransform: 'uppercase',
                   }}
                 >
-                  {mod}
+                  Clear Teleported Cards
                 </button>
-              ))}
+              )}
             </div>
 
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              {renderModule(rightModule)}
+            {/* Selected Stock Live 3D Holographic Inspection Card */}
+            <div
+              style={{
+                padding: '32px',
+                borderRadius: '24px',
+                background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(124, 58, 237, 0.03))',
+                border: '1.5px solid rgba(168, 85, 247, 0.3)',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(168, 85, 247, 0.15)',
+                marginBottom: '40px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#a855f7', fontWeight: 700, marginBottom: '4px' }}>
+                    REAL-TIME SYNCED ASSET
+                  </div>
+                  <div style={{ fontSize: '32px', fontWeight: 900, color: '#ffffff' }}>{selectedStock.ticker}</div>
+                  <div style={{ fontSize: '14px', color: '#a1a1aa' }}>{selectedStock.name}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '32px', fontWeight: 900, color: '#ffffff' }}>{selectedStock.price}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: selectedStock.isUp ? '#34d399' : '#f87171' }}>{selectedStock.change}</div>
+                </div>
+              </div>
+
+              {/* AI Prospectus Report */}
+              <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '24px' }}>
+                <div style={{ fontSize: '12px', color: '#c084fc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <Sparkles size={16} />
+                  <span>AI Valuation & Broker Prospectus Summary</span>
+                </div>
+                <div style={{ fontSize: '13px', color: '#e4e4e7', lineHeight: 1.6 }}>
+                  {selectedStock.aiSignal} • Broker Flow: <strong>{selectedStock.broker}</strong>. Valuation metrics indicate P/E of {selectedStock.pe} with total Market Capitalization of {selectedStock.marketCap}.
+                </div>
+              </div>
+
+              {/* 3D Visualizer Bars */}
+              <div style={{ fontSize: '12px', color: '#71717a', marginBottom: '10px' }}>3D Momentum Telemetry</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', height: '100px' }}>
+                {[35, 45, 60, 52, 78, 85, 92, 100].map((val, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      flex: 1,
+                      height: `${val}%`,
+                      background: 'linear-gradient(to top, #7c3aed, #c084fc)',
+                      borderRadius: '6px 6px 0 0',
+                      boxShadow: '0 0 15px rgba(168, 85, 247, 0.4)',
+                    }}
+                  />
+                ))}
+              </div>
             </div>
+
+            {/* Teleported 3D Cards Receive Queue */}
+            {teleportedCards.length > 0 && (
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Layers size={18} color="#a855f7" />
+                  <span>Teleported 3D Asset Queue ({teleportedCards.length})</span>
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  {teleportedCards.map((card, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, x: -100, rotateY: 90 }}
+                      animate={{ opacity: 1, x: 0, rotateY: 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      style={{
+                        padding: '20px',
+                        borderRadius: '16px',
+                        background: 'rgba(168, 85, 247, 0.1)',
+                        border: '1px solid rgba(168, 85, 247, 0.3)',
+                        boxShadow: '0 10px 30px rgba(168, 85, 247, 0.2)',
+                      }}
+                    >
+                      <div style={{ fontSize: '11px', color: '#c084fc', fontWeight: 700, marginBottom: '4px' }}>
+                        ✦ TELEPORTED FROM LEFT TAB
+                      </div>
+                      <div style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>{card.ticker}</div>
+                      <div style={{ fontSize: '13px', color: '#a1a1aa' }}>{card.name} — {card.price}</div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
