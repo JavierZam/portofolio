@@ -7,6 +7,7 @@ import Projects from './components/Projects'
 import SecretGaming from './components/SecretGaming'
 import Guestbook from './components/Guestbook'
 import Footer from './components/Footer'
+import FloatingHub from './components/FloatingHub'
 import { useSecretCode } from './hooks/useSecretCode'
 
 export default function App() {
@@ -35,6 +36,8 @@ export default function App() {
       <Guestbook />
       <Footer />
       <SecretGaming isOpen={gamingOpen} onClose={() => setGamingOpen(false)} />
+      <FloatingHub />
     </div>
   )
 }
+
