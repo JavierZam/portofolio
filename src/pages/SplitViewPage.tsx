@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ArrowLeft, Chrome, Radio, Zap, Sparkles, MoveRight, 
-  ExternalLink, Layers, RefreshCw, CheckCircle2, TrendingUp
+  ExternalLink, Layers, RefreshCw, CheckCircle2, TrendingUp, Info
 } from 'lucide-react'
 
 /* ─── Shared Types & Data ─────────────────────────────── */
@@ -209,7 +209,7 @@ export default function SplitViewPage() {
   const [channel, setChannel] = useState<BroadcastChannel | null>(null)
   const [connectedTabsCount, setConnectedTabsCount] = useState(1)
   
-  // Tab Role: default to URL param if set, otherwise LEFT
+  // Tab Role: auto detect or URL param
   const [tabRole, setTabRole] = useState<'LEFT' | 'RIGHT'>(() => {
     if (initialViewParam === 'right') return 'RIGHT'
     return 'LEFT'
@@ -221,22 +221,35 @@ export default function SplitViewPage() {
   const [laserY, setLaserY] = useState<number | null>(null)
   const [activeBeamAnim, setActiveBeamAnim] = useState(false)
   const [lastActionLog, setLastActionLog] = useState<string>('Ready for Chrome Split View sync')
+  const [showGuideTooltip, setShowGuideTooltip] = useState(false)
 
-  // BroadcastChannel Initialization
+  // BroadcastChannel Handshake
   useEffect(() => {
     const bc = new BroadcastChannel('chrome_split_view_sync')
     setChannel(bc)
 
-    // Notify tab join
-    bc.postMessage({ type: 'TAB_JOINED', tabId, requestedRole: initialViewParam })
+    // Handshake: ask if a Left tab exists
+    bc.postMessage({ type: 'WHO_IS_LEFT', tabId })
 
     bc.onmessage = (event) => {
       const { type, senderId, payload } = event.data
       if (senderId === tabId) return
 
-      if (type === 'TAB_JOINED') {
+      if (type === 'WHO_IS_LEFT') {
+        if (tabRole === 'LEFT') {
+          bc.postMessage({ type: 'I_AM_LEFT', senderId: tabId })
+          setConnectedTabsCount(2)
+          setLastActionLog('Chrome 2nd Tab connected!')
+        }
+      }
+
+      if (type === 'I_AM_LEFT') {
         setConnectedTabsCount(2)
-        setLastActionLog('Chrome Split View connected! (2 Tabs Sync Active)')
+        // Auto set new tab as RIGHT if not explicitly set
+        if (!initialViewParam) {
+          setTabRole('RIGHT')
+        }
+        setLastActionLog('Auto-Assigned as RIGHT TAB (3D Stage)')
       }
 
       if (type === 'MOUSE_BEAM') {
@@ -245,7 +258,7 @@ export default function SplitViewPage() {
 
       if (type === 'SELECT_STOCK') {
         setSelectedStock(payload.stock)
-        setLastActionLog(`Received Stock Sync: ${payload.stock.ticker}`)
+        setLastActionLog(`Synced Stock: ${payload.stock.ticker}`)
       }
 
       if (type === 'TELEPORT_CARD') {
@@ -264,7 +277,7 @@ export default function SplitViewPage() {
       bc.postMessage({ type: 'TAB_LEFT', tabId })
       bc.close()
     }
-  }, [tabId, initialViewParam])
+  }, [tabId, tabRole, initialViewParam])
 
   // Mouse Move Broadcast
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -313,32 +326,11 @@ export default function SplitViewPage() {
     }
   }
 
-  const handleAutoSplitWindows = () => {
-    const halfWidth = Math.floor(window.screen.availWidth / 2)
-    const fullHeight = window.screen.availHeight
-
-    // 1. Position current window on left side
-    try {
-      window.resizeTo(halfWidth, fullHeight)
-      window.moveTo(0, 0)
-    } catch {
-      // Browser permissions may restrict resizing primary window
-    }
-    setTabRole('LEFT')
-
-    // 2. Open 2nd window snapped to right side of screen
-    const rightUrl = `${window.location.origin}/labs/split-view?view=right`
-    window.open(
-      rightUrl,
-      'RightSplitViewWindow',
-      `width=${halfWidth},height=${fullHeight},left=${halfWidth},top=0,resizable=yes,scrollbars=yes`
-    )
-    setLastActionLog('Auto-Split Launched! 2 Windows snapped side-by-side!')
-  }
-
   const handleOpenSecondTab = () => {
     const rightTabUrl = `${window.location.origin}/labs/split-view?view=right`
     window.open(rightTabUrl, '_blank')
+    setShowGuideTooltip(true)
+    setTimeout(() => setShowGuideTooltip(false), 8000)
   }
 
   return (
@@ -400,13 +392,13 @@ export default function SplitViewPage() {
 
         {/* Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Auto-Split Snapped Windows Button */}
+          {/* Open 2nd Tab Button */}
           <button
-            onClick={handleAutoSplitWindows}
+            onClick={handleOpenSecondTab}
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
-              background: 'linear-gradient(135deg, #059669, #10b981)',
+              background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
               border: 'none',
               color: '#ffffff',
               fontSize: '12px',
@@ -415,32 +407,11 @@ export default function SplitViewPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
-            }}
-          >
-            <Zap size={14} />
-            <span>⚡ 1-Click Auto-Split Side-by-Side Windows</span>
-          </button>
-
-          {/* Button to Open Second Tab in Chrome */}
-          <button
-            onClick={handleOpenSecondTab}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
+              boxShadow: '0 4px 14px rgba(168, 85, 247, 0.3)',
             }}
           >
             <ExternalLink size={14} />
-            <span>Open 2nd Tab (?view=right)</span>
+            <span>➕ Open 2nd Tab in Chrome</span>
           </button>
 
           {/* Role Indicator & Manual Switch */}
@@ -459,7 +430,7 @@ export default function SplitViewPage() {
             }}
           >
             <Radio size={14} />
-            <span>Mode: {tabRole} TAB</span>
+            <span>{tabRole} TAB</span>
           </div>
 
           <button
@@ -474,10 +445,44 @@ export default function SplitViewPage() {
               cursor: 'pointer',
             }}
           >
-            Switch to {tabRole === 'LEFT' ? 'RIGHT' : 'LEFT'}
+            Switch Role
           </button>
         </div>
       </header>
+
+      {/* ── TOOLTIP GUIDE BANNER ── */}
+      <AnimatePresence>
+        {showGuideTooltip && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            style={{
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(124, 58, 237, 0.25))',
+              borderBottom: '1px solid #a855f7',
+              padding: '12px 24px',
+              fontSize: '13px',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              position: 'relative',
+              zIndex: 60,
+              boxShadow: '0 4px 20px rgba(168, 85, 247, 0.3)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Info size={18} color="#c084fc" />
+              <span>
+                <strong>Tab 2 Terbuka!</strong> Untuk mengaktifkan Chrome Split View: Klik kanan pada Tab 2 di bagian atas Chrome ➔ Pilih <strong>&quot;Arrange split view&quot;</strong> (atau tekan <code>Win + ➔</code> pada keyboard).
+              </span>
+            </div>
+            <button onClick={() => setShowGuideTooltip(false)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
+              ✕
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── INSTRUCTION BANNER ── */}
       <div
@@ -535,7 +540,7 @@ export default function SplitViewPage() {
                 Stock & IPO Prospectus Intelligence
               </h1>
               <p style={{ fontSize: '14px', color: '#a1a1aa', margin: 0, maxWidth: '650px', lineHeight: 1.6 }}>
-                Click <strong>&quot;Open 2nd Tab&quot;</strong> at top-right, then drag it into Chrome&apos;s native Split View! Select stocks or beam 3D cards to see objects teleport across tabs!
+                Click <strong>&quot;➕ Open 2nd Tab in Chrome&quot;</strong> at top-right, then right-click Tab 2 ➔ Arrange Split View. Select stocks or beam 3D cards to see objects teleport across tabs!
               </p>
             </div>
 
