@@ -12,20 +12,20 @@ const projects = [
     status: 'Try Now',
   },
   {
-    title: 'Stock Analyzer',
-    description: 'Analyze stocks, IPO data & broker reports by importing PDFs. AI-powered insights for smarter investment decisions.',
+    title: 'Stock & IPO Intelligence',
+    description: 'Analyze stocks, IPO prospectus data & broker reports with AI insights, momentum charts, and valuation metrics.',
     icon: BarChart3,
-    path: '/labs',
+    path: '/labs/split-view',
     color: 'from-emerald-500 to-teal-600',
-    status: 'Coming Soon',
+    status: 'Try Now',
   },
   {
     title: 'Split View Lab',
-    description: 'Simulated browser split-view experience inside a web app. Compare and interact with two independent panels side by side.',
+    description: 'Simulated Chrome split-view experience inside a web app. Compare and interact with two independent workspace modules side by side.',
     icon: Columns2,
-    path: '/labs',
+    path: '/labs/split-view',
     color: 'from-cyan-500 to-blue-600',
-    status: 'Coming Soon',
+    status: 'Try Now',
   },
 ]
 

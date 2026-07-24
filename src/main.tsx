@@ -11,6 +11,7 @@ import DevRacePage from './pages/DevRacePage.tsx'
 import GitWarPage from './pages/GitWarPage.tsx'
 import LabsHub from './pages/LabsHub.tsx'
 import SlideUiPage from './pages/SlideUiPage.tsx'
+import SplitViewPage from './pages/SplitViewPage.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -25,6 +26,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/games/git-war" element={<GitWarPage />} />
         <Route path="/labs" element={<LabsHub />} />
         <Route path="/labs/slide-ui" element={<SlideUiPage />} />
+        <Route path="/labs/split-view" element={<SplitViewPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
