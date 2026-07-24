@@ -1,447 +1,790 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, GripVertical, MapPin, Github, Linkedin, ExternalLink, Briefcase, GraduationCap } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { 
+  ArrowLeft, GripVertical, MapPin, Github, Linkedin, ExternalLink, 
+  Briefcase, GraduationCap, Code, Server, Cpu, Terminal as TerminalIcon, 
+  Send, CheckCircle2, Sparkles, Sliders, Monitor, Zap
+} from 'lucide-react'
 
-/* ─── Portfolio Data (mirrors real portfolio) ─────────── */
+/* ─── Shared State & Data ─────────────────────────────── */
 
-const portfolio = {
+const PORTFOLIO_DATA = {
   name: 'Javier Zam',
-  greeting: "Hey, I'm",
-  subtitle: 'Software Engineer · Cloud Enthusiast · Occasional Gamer',
+  role: 'Software Engineer & Cloud Architect',
   location: 'Jakarta, Indonesia',
-  bio: 'I build backend systems, break things in production, and deploy to GCP at 3 AM.',
-  skills: [
-    { name: 'Golang', level: 95 },
-    { name: 'React', level: 80 },
-    { name: 'GCP', level: 90 },
-    { name: 'Docker', level: 85 },
-    { name: 'Node.js', level: 82 },
-    { name: 'PostgreSQL', level: 88 },
-  ],
-  projects: [
-    { title: 'PayViz', desc: 'Enterprise payroll management system', tags: ['Vue.js', 'Node.js', 'PostgreSQL'] },
-    { title: 'Pasargamex', desc: 'Online game marketplace with real-time chat', tags: ['Golang', 'React', 'GCP'] },
-    { title: 'Trackori', desc: 'ML-powered calorie tracking app', tags: ['GCP', 'FastAPI', 'ML'] },
-  ],
-  experience: [
-    { title: 'Software Developer', company: 'PT Bisnis Adviz Solusi', period: '2025 – Present', type: 'work' as const },
-    { title: 'Fullstack Developer', company: 'HiColleagues', period: '2023 – 2024', type: 'work' as const },
-    { title: 'Cloud Computing', company: 'Bangkit Academy (Google)', period: '2023', type: 'education' as const },
-  ],
+  bio: 'Building resilient backend microservices, distributed cloud infrastructure on GCP, and high-performance full-stack web applications.',
   stats: [
     { label: 'GitHub Repos', value: '35+' },
-    { label: 'Bugs Created', value: '∞' },
-    { label: 'Bugs Fixed', value: 'Most?' },
-    { label: 'Coffee/Day', value: '☕×4' },
+    { label: 'Cloud Deploys', value: '150+' },
+    { label: 'Uptime Score', value: '99.9%' },
+    { label: 'Coffee Level', value: '100%' },
+  ],
+  skills: [
+    { name: 'Golang / Echo', category: 'Backend', level: 95 },
+    { name: 'GCP & Cloud Run', category: 'Cloud', level: 92 },
+    { name: 'React & TypeScript', category: 'Frontend', level: 88 },
+    { name: 'Docker & CI/CD', category: 'DevOps', level: 86 },
+    { name: 'PostgreSQL & Redis', category: 'Database', level: 90 },
+  ],
+  projects: [
+    {
+      title: 'PayViz Enterprise',
+      category: 'Fullstack',
+      desc: 'Automated payroll management handling Rp 100M+ monthly with BPJS tax automation & PDF exports.',
+      tags: ['Vue.js', 'Node.js', 'PostgreSQL', 'GCP'],
+      stars: 42,
+    },
+    {
+      title: 'Pasargamex Engine',
+      category: 'Cloud',
+      desc: 'Real-time gaming asset marketplace with live WebSocket chat, escrow system & inventory management.',
+      tags: ['Golang', 'React', 'WebSocket', 'GCP'],
+      stars: 38,
+    },
+    {
+      title: 'Trackori AI',
+      category: 'Fullstack',
+      desc: 'ML-powered nutrition and calorie tracking mobile system with auto food recognition models.',
+      tags: ['FastAPI', 'Python', 'Cloud Run', 'Kotlin'],
+      stars: 29,
+    },
+  ],
+  experience: [
+    {
+      role: 'Software Developer',
+      company: 'PT Bisnis Adviz Solusi',
+      period: '2025 – Present',
+      desc: 'Architecting GCP Cloud Run backend APIs, microservices, and high-scale Postgres schemas.',
+      type: 'work',
+    },
+    {
+      role: 'Fullstack Developer',
+      company: 'HiColleagues CRM',
+      period: '2023 – 2024',
+      desc: 'Engineered commercial CRM with Golang Echo, payment gateway integrations, and Telegram bots.',
+      type: 'work',
+    },
+    {
+      role: 'Cloud Computing Graduate',
+      company: 'Bangkit Academy (Google)',
+      period: '2023',
+      desc: 'Graduated with distinction. Architected end-to-end cloud infrastructure on GCP.',
+      type: 'edu',
+    },
   ],
 }
 
-/* ─── Retro Terminal Theme (Left) ─────────────────────── */
+/* ─── Identical Metric Layout Component ──────────────── */
 
-function RetroPortfolio() {
-  const s = {
-    bg: '#0a0a0f',
-    card: '#0d0d14',
-    border: '#1a1a24',
-    accent: '#39ff14',
-    accentDim: '#39ff1460',
-    text: '#39ff14',
-    textDim: '#39ff1480',
-    textMuted: '#333',
-    font: "'JetBrains Mono', 'Fira Code', monospace",
+interface ThemeProps {
+  theme: 'cyberpunk' | 'modern'
+  activeTab: string
+  setActiveTab: (tab: string) => void
+  projectCategory: string
+  setProjectCategory: (cat: string) => void
+  likedProjects: Record<string, boolean>
+  toggleLike: (title: string) => void
+  contactName: string
+  setContactName: (val: string) => void
+  contactMsg: string
+  setContactMsg: (val: string) => void
+  submitted: boolean
+  handleSubmitContact: (e: React.FormEvent) => void
+  terminalCmd: string
+  setTerminalCmd: (val: string) => void
+  terminalLogs: string[]
+  handleTerminalSubmit: (e: React.FormEvent) => void
+}
+
+function UnifiedPortfolioLayout({
+  theme,
+  activeTab,
+  setActiveTab,
+  projectCategory,
+  setProjectCategory,
+  likedProjects,
+  toggleLike,
+  contactName,
+  setContactName,
+  contactMsg,
+  setContactMsg,
+  submitted,
+  handleSubmitContact,
+  terminalCmd,
+  setTerminalCmd,
+  terminalLogs,
+  handleTerminalSubmit,
+}: ThemeProps) {
+  const isCyber = theme === 'cyberpunk'
+
+  // Styling Tokens with Identical Heights, Spacings, and Structural Dimensions
+  const style = {
+    bg: isCyber ? '#05080c' : '#0a0915',
+    textPrimary: isCyber ? '#00ff66' : '#ffffff',
+    textSecondary: isCyber ? '#00cc52' : '#a1a1aa',
+    textMuted: isCyber ? '#007733' : '#71717a',
+    accent: isCyber ? '#00ff66' : '#a855f7',
+    accentGlow: isCyber ? 'rgba(0, 255, 102, 0.25)' : 'rgba(168, 85, 247, 0.25)',
+    cardBg: isCyber ? '#080d14' : 'rgba(255, 255, 255, 0.03)',
+    cardBorder: isCyber ? '1px solid #00441b' : '1px solid rgba(255, 255, 255, 0.08)',
+    buttonBg: isCyber ? '#00ff66' : 'linear-gradient(135deg, #8b5cf6, #d946ef)',
+    buttonText: isCyber ? '#05080c' : '#ffffff',
+    badgeBg: isCyber ? 'rgba(0, 255, 102, 0.1)' : 'rgba(168, 85, 247, 0.15)',
+    badgeBorder: isCyber ? '1px solid rgba(0, 255, 102, 0.3)' : '1px solid rgba(168, 85, 247, 0.3)',
+    fontFamily: isCyber ? "'JetBrains Mono', monospace" : "'Inter', system-ui, sans-serif",
+    borderRadiusCard: isCyber ? '2px' : '16px',
+    borderRadiusBtn: isCyber ? '2px' : '10px',
   }
 
+  const filteredProjects = projectCategory === 'All' 
+    ? PORTFOLIO_DATA.projects 
+    : PORTFOLIO_DATA.projects.filter(p => p.category === projectCategory)
+
   return (
-    <div style={{
-      position: 'absolute', inset: 0, background: s.bg, color: s.text,
-      fontFamily: s.font, overflow: 'auto',
-    }}>
-      {/* ── Navbar ── */}
-      <div style={{
-        padding: '12px 20px', borderBottom: `1px solid ${s.border}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span style={{ fontWeight: 700, fontSize: '14px' }}>
-          <span style={{ color: s.accent }}>&lt;</span>Javier Zam<span style={{ color: s.accent }}> /&gt;</span>
-        </span>
-        <div style={{ display: 'flex', gap: '16px', fontSize: '11px', color: s.textDim }}>
-          {['About', 'Exp', 'Projects'].map(l => (
-            <span key={l} style={{ cursor: 'pointer' }}>[{l}]</span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Hero ── */}
-      <div style={{ padding: '28px 20px 20px', textAlign: 'center' }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '6px',
-          padding: '3px 12px', border: `1px solid ${s.border}`,
-          fontSize: '10px', color: s.textDim, marginBottom: '12px',
-        }}>
-          <MapPin size={10} /> {portfolio.location}
-        </div>
-        <div style={{ fontSize: '11px', color: s.textDim, marginBottom: '4px' }}>
-          $ echo "{portfolio.greeting}"
-        </div>
-        <h1 style={{
-          fontSize: '28px', fontWeight: 900, color: s.accent, margin: '0 0 6px',
-          textShadow: `0 0 20px ${s.accentDim}`, letterSpacing: '-1px',
-        }}>
-          {portfolio.name}<span style={{ animation: 'blink 1s step-end infinite' }}>_</span>
-        </h1>
-        <p style={{ fontSize: '10px', color: s.textDim, margin: '0 0 14px', letterSpacing: '1px' }}>
-          {portfolio.subtitle.toUpperCase()}
-        </p>
-        <p style={{ fontSize: '11px', color: s.textDim, margin: '0 0 16px', lineHeight: 1.6, maxWidth: '400px', marginInline: 'auto' }}>
-          // {portfolio.bio}
-        </p>
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-          <button style={{
-            padding: '8px 20px', background: s.accent, color: '#000',
-            border: 'none', fontFamily: s.font, fontSize: '11px', fontWeight: 700,
-            cursor: 'pointer', letterSpacing: '1px',
-          }}>
-            SEE_WORK ↓
-          </button>
-          <button style={{
-            padding: '8px 16px', background: 'transparent',
-            border: `1px solid ${s.border}`, color: s.textDim,
-            fontFamily: s.font, fontSize: '11px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px',
-          }}>
-            <Github size={12} /> GitHub
-          </button>
-          <button style={{
-            padding: '8px 16px', background: 'transparent',
-            border: `1px solid ${s.border}`, color: s.textDim,
-            fontFamily: s.font, fontSize: '11px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px',
-          }}>
-            <Linkedin size={12} /> LinkedIn
-          </button>
-        </div>
-      </div>
-
-      {/* ── Stats ── */}
-      <div style={{ padding: '0 20px 16px' }}>
-        <div style={{ fontSize: '10px', color: s.textMuted, marginBottom: '8px', letterSpacing: '1px' }}>
-          // QUICK_STATS
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-          {portfolio.stats.map(st => (
-            <div key={st.label} style={{
-              padding: '10px 8px', background: s.card, border: `1px solid ${s.border}`,
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: s.accent }}>{st.value}</div>
-              <div style={{ fontSize: '9px', color: s.textDim, marginTop: '2px' }}>{st.label}</div>
+    <div
+      style={{
+        width: '100vw',
+        minHeight: '100vh',
+        backgroundColor: style.bg,
+        color: style.textPrimary,
+        fontFamily: style.fontFamily,
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+      }}
+    >
+      {/* ── Main Container (identical 1100px max-width) ── */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '90px 24px 80px' }}>
+        
+        {/* ── Header / Navbar ── */}
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingBottom: '32px',
+            borderBottom: style.cardBorder,
+            marginBottom: '48px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: style.borderRadiusBtn,
+                background: style.badgeBg,
+                border: style.badgeBorder,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isCyber ? <TerminalIcon size={20} color={style.accent} /> : <Sparkles size={20} color={style.accent} />}
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Skills ── */}
-      <div style={{ padding: '0 20px 16px' }}>
-        <div style={{ fontSize: '10px', color: s.textMuted, marginBottom: '10px', letterSpacing: '1px' }}>
-          // SKILL_PROFICIENCY
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {portfolio.skills.map(sk => (
-            <div key={sk.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '10px', color: s.textDim, width: '80px', textAlign: 'right' }}>{sk.name}</span>
-              <div style={{ flex: 1, height: '8px', background: s.card, border: `1px solid ${s.border}` }}>
-                <div style={{
-                  height: '100%', width: `${sk.level}%`,
-                  background: s.accent, boxShadow: `0 0 6px ${s.accentDim}`,
-                  transition: 'width 1s ease',
-                }} />
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 800, letterSpacing: isCyber ? '0px' : '-0.5px' }}>
+                {isCyber ? `> ${PORTFOLIO_DATA.name}` : PORTFOLIO_DATA.name}
               </div>
-              <span style={{ fontSize: '9px', color: s.accent, width: '28px' }}>{sk.level}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Experience ── */}
-      <div style={{ padding: '0 20px 16px' }}>
-        <div style={{ fontSize: '10px', color: s.textMuted, marginBottom: '10px', letterSpacing: '1px' }}>
-          // EXPERIENCE_LOG
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {portfolio.experience.map((exp, i) => (
-            <div key={i} style={{
-              padding: '10px 12px', background: s.card, border: `1px solid ${s.border}`,
-              display: 'flex', alignItems: 'center', gap: '10px',
-            }}>
-              <div style={{
-                width: '24px', height: '24px', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                border: `1px solid ${s.border}`, color: s.accent, fontSize: '12px',
-              }}>
-                {exp.type === 'work' ? <Briefcase size={12} /> : <GraduationCap size={12} />}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: s.accent }}>{exp.title}</div>
-                <div style={{ fontSize: '10px', color: s.textDim }}>{exp.company} | {exp.period}</div>
+              <div style={{ fontSize: '12px', color: style.textMuted }}>
+                {isCyber ? '// PORTFOLIO_SYS_V2' : 'Software Engineer & Cloud Architect'}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* ── Projects ── */}
-      <div style={{ padding: '0 20px 16px' }}>
-        <div style={{ fontSize: '10px', color: s.textMuted, marginBottom: '10px', letterSpacing: '1px' }}>
-          // PROJECT_INDEX
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {portfolio.projects.map((p, i) => (
-            <div key={i} style={{
-              padding: '12px', background: s.card, border: `1px solid ${s.border}`,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: s.accent }}>{p.title}</span>
-                <ExternalLink size={10} color={s.textDim} style={{ cursor: 'pointer' }} />
+          <nav style={{ display: 'flex', gap: '8px' }}>
+            {['Overview', 'Projects', 'Terminal', 'Contact'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: style.borderRadiusBtn,
+                  background: activeTab === tab ? style.badgeBg : 'transparent',
+                  border: activeTab === tab ? style.badgeBorder : '1px solid transparent',
+                  color: activeTab === tab ? style.accent : style.textSecondary,
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: style.fontFamily,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {isCyber ? `[${tab.toUpperCase()}]` : tab}
+              </button>
+            ))}
+          </nav>
+        </header>
+
+        {/* ── HERO SECTION ── */}
+        <section style={{ marginBottom: '64px' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 14px',
+              borderRadius: style.borderRadiusBtn,
+              background: style.badgeBg,
+              border: style.badgeBorder,
+              fontSize: '12px',
+              color: style.accent,
+              marginBottom: '20px',
+            }}
+          >
+            <MapPin size={14} />
+            <span>{PORTFOLIO_DATA.location} • Available for Cloud & Fullstack Projects</span>
+          </div>
+
+          <h1
+            style={{
+              fontSize: '44px',
+              fontWeight: 900,
+              lineHeight: 1.15,
+              margin: '0 0 16px',
+              letterSpacing: isCyber ? '0px' : '-1.5px',
+              color: style.textPrimary,
+            }}
+          >
+            {isCyber ? (
+              <span>
+                SYSTEM.<span style={{ color: '#ffffff' }}>ARCHITECT</span>()
+              </span>
+            ) : (
+              <span>
+                Crafting High-Scale <span style={{ color: style.accent }}>Cloud Systems</span> & UIs
+              </span>
+            )}
+          </h1>
+
+          <p
+            style={{
+              fontSize: '16px',
+              lineHeight: 1.6,
+              color: style.textSecondary,
+              maxWidth: '720px',
+              margin: '0 0 28px',
+            }}
+          >
+            {PORTFOLIO_DATA.bio}
+          </p>
+
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+            <button
+              onClick={() => setActiveTab('Contact')}
+              style={{
+                padding: '12px 28px',
+                borderRadius: style.borderRadiusBtn,
+                background: style.buttonBg,
+                color: style.buttonText,
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: style.fontFamily,
+                boxShadow: isCyber ? `0 0 20px ${style.accentGlow}` : `0 4px 20px ${style.accentGlow}`,
+              }}
+            >
+              {isCyber ? '$ EXECUTE_CONTACT' : 'Get In Touch →'}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('Projects')}
+              style={{
+                padding: '12px 24px',
+                borderRadius: style.borderRadiusBtn,
+                background: style.cardBg,
+                border: style.cardBorder,
+                color: style.textSecondary,
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: style.fontFamily,
+              }}
+            >
+              {isCyber ? 'VIEW_PROJECTS()' : 'Explore Projects'}
+            </button>
+          </div>
+        </section>
+
+        {/* ── STATS GRID (Identical 4-Column Grid) ── */}
+        <section
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '16px',
+            marginBottom: '64px',
+          }}
+        >
+          {PORTFOLIO_DATA.stats.map(stat => (
+            <div
+              key={stat.label}
+              style={{
+                padding: '20px',
+                background: style.cardBg,
+                border: style.cardBorder,
+                borderRadius: style.borderRadiusCard,
+                boxSizing: 'border-box',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 900,
+                  color: style.accent,
+                  lineHeight: 1,
+                  marginBottom: '6px',
+                }}
+              >
+                {stat.value}
               </div>
-              <p style={{ fontSize: '10px', color: s.textDim, margin: '0 0 6px', lineHeight: 1.5 }}>{p.desc}</p>
-              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' as const }}>
-                {p.tags.map(t => (
-                  <span key={t} style={{
-                    padding: '2px 6px', fontSize: '9px', border: `1px solid ${s.border}`,
-                    color: s.textDim,
-                  }}>{t}</span>
-                ))}
-              </div>
+              <div style={{ fontSize: '12px', color: style.textMuted }}>{stat.label}</div>
             </div>
           ))}
-        </div>
-      </div>
+        </section>
 
-      {/* ── Footer ── */}
-      <div style={{
-        padding: '12px 20px', borderTop: `1px solid ${s.border}`,
-        fontSize: '9px', color: s.textMuted, textAlign: 'center',
-      }}>
-        LEGACY_OS // BUILT_WITH: mendoan + late-night deploys
+        {/* ── SKILLS & EXPERIENCES (2-Column Grid) ── */}
+        <section
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '32px',
+            marginBottom: '64px',
+          }}
+        >
+          {/* Skills Column */}
+          <div
+            style={{
+              padding: '24px',
+              background: style.cardBg,
+              border: style.cardBorder,
+              borderRadius: style.borderRadiusCard,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '18px',
+                fontWeight: 800,
+                margin: '0 0 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: style.textPrimary,
+              }}
+            >
+              <Cpu size={18} color={style.accent} />
+              <span>{isCyber ? 'TECHNICAL_STACK' : 'Core Technologies'}</span>
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {PORTFOLIO_DATA.skills.map(skill => (
+                <div key={skill.name}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: 600, color: style.textSecondary }}>{skill.name}</span>
+                    <span style={{ color: style.accent, fontWeight: 700 }}>{skill.level}%</span>
+                  </div>
+                  <div
+                    style={{
+                      height: '8px',
+                      width: '100%',
+                      background: isCyber ? '#02150a' : 'rgba(255, 255, 255, 0.06)',
+                      borderRadius: isCyber ? '0' : '4px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${skill.level}%`,
+                        background: style.buttonBg,
+                        borderRadius: isCyber ? '0' : '4px',
+                        boxShadow: isCyber ? `0 0 10px ${style.accent}` : 'none',
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Experience Column */}
+          <div
+            style={{
+              padding: '24px',
+              background: style.cardBg,
+              border: style.cardBorder,
+              borderRadius: style.borderRadiusCard,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '18px',
+                fontWeight: 800,
+                margin: '0 0 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: style.textPrimary,
+              }}
+            >
+              <Briefcase size={18} color={style.accent} />
+              <span>{isCyber ? 'WORK_HISTORY' : 'Work Experience'}</span>
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {PORTFOLIO_DATA.experience.map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    paddingBottom: idx !== PORTFOLIO_DATA.experience.length - 1 ? '16px' : '0',
+                    borderBottom: idx !== PORTFOLIO_DATA.experience.length - 1 ? style.cardBorder : 'none',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: style.textPrimary }}>{item.role}</div>
+                    <span style={{ fontSize: '11px', color: style.accent, padding: '2px 8px', background: style.badgeBg, borderRadius: style.borderRadiusBtn }}>
+                      {item.period}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: style.textMuted, marginBottom: '6px' }}>{item.company}</div>
+                  <div style={{ fontSize: '12px', color: style.textSecondary, lineHeight: 1.5 }}>{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── FEATURED PROJECTS SECTION ── */}
+        <section style={{ marginBottom: '64px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 800, margin: 0, color: style.textPrimary }}>
+              {isCyber ? 'PROJECT_CATALOG' : 'Featured Projects'}
+            </h2>
+
+            {/* Filter Buttons */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {['All', 'Fullstack', 'Cloud'].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setProjectCategory(cat)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: style.borderRadiusBtn,
+                    background: projectCategory === cat ? style.badgeBg : style.cardBg,
+                    border: projectCategory === cat ? style.badgeBorder : style.cardBorder,
+                    color: projectCategory === cat ? style.accent : style.textMuted,
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: style.fontFamily,
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+            {filteredProjects.map(proj => (
+              <div
+                key={proj.title}
+                style={{
+                  padding: '20px',
+                  background: style.cardBg,
+                  border: style.cardBorder,
+                  borderRadius: style.borderRadiusCard,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  minHeight: '200px',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: style.textPrimary }}>{proj.title}</div>
+                    <button
+                      onClick={() => toggleLike(proj.title)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: likedProjects[proj.title] ? '#ff4757' : style.textMuted,
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      ♥ {proj.stars + (likedProjects[proj.title] ? 1 : 0)}
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '13px', color: style.textSecondary, margin: '0 0 16px', lineHeight: 1.5 }}>
+                    {proj.desc}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {proj.tags.map(t => (
+                    <span
+                      key={t}
+                      style={{
+                        fontSize: '11px',
+                        padding: '3px 8px',
+                        borderRadius: style.borderRadiusBtn,
+                        background: style.badgeBg,
+                        border: style.badgeBorder,
+                        color: style.accent,
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── INTERACTIVE TERMINAL SECTION ── */}
+        <section style={{ marginBottom: '64px' }}>
+          <div
+            style={{
+              background: isCyber ? '#020b05' : 'rgba(0, 0, 0, 0.4)',
+              border: style.cardBorder,
+              borderRadius: style.borderRadiusCard,
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '12px 18px',
+                background: isCyber ? '#041409' : 'rgba(255, 255, 255, 0.04)',
+                borderBottom: style.cardBorder,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700 }}>
+                <TerminalIcon size={14} color={style.accent} />
+                <span>Interactive Cloud CLI</span>
+              </div>
+              <div style={{ fontSize: '11px', color: style.textMuted }}>Type 'help' for available commands</div>
+            </div>
+
+            <div style={{ padding: '18px', minHeight: '140px', fontSize: '13px', lineHeight: 1.6, color: style.textSecondary }}>
+              {terminalLogs.map((log, i) => (
+                <div key={i} style={{ color: log.startsWith('>') ? style.accent : style.textSecondary }}>
+                  {log}
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={handleTerminalSubmit} style={{ display: 'flex', borderTop: style.cardBorder }}>
+              <span style={{ padding: '12px 14px', color: style.accent, fontWeight: 700 }}>&gt;</span>
+              <input
+                type="text"
+                value={terminalCmd}
+                onChange={e => setTerminalCmd(e.target.value)}
+                placeholder="type command (e.g. help, skills, deploy, clear)..."
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  color: style.textPrimary,
+                  fontFamily: style.fontFamily,
+                  fontSize: '13px',
+                }}
+              />
+            </form>
+          </div>
+        </section>
+
+        {/* ── CONTACT FORM ── */}
+        <section style={{ marginBottom: '40px' }}>
+          <div
+            style={{
+              padding: '32px',
+              background: style.cardBg,
+              border: style.cardBorder,
+              borderRadius: style.borderRadiusCard,
+            }}
+          >
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 8px', color: style.textPrimary }}>
+              {isCyber ? 'SEND_TRANSMISSION' : 'Let\'s Connect & Build Together'}
+            </h2>
+            <p style={{ fontSize: '13px', color: style.textMuted, margin: '0 0 24px' }}>
+              Have a project in mind or interested in backend cloud architecture? Send a direct message below.
+            </p>
+
+            {submitted ? (
+              <div style={{ padding: '16px', background: style.badgeBg, border: style.badgeBorder, color: style.accent, borderRadius: style.borderRadiusBtn, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={18} />
+                <span>Transmission received successfully! I'll reply to your message soon.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitContact} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <input
+                    type="text"
+                    value={contactName}
+                    onChange={e => setContactName(e.target.value)}
+                    placeholder="Your Name"
+                    required
+                    style={{
+                      padding: '12px 16px',
+                      background: isCyber ? '#040b06' : 'rgba(255, 255, 255, 0.04)',
+                      border: style.cardBorder,
+                      borderRadius: style.borderRadiusBtn,
+                      color: style.textPrimary,
+                      outline: 'none',
+                      fontFamily: style.fontFamily,
+                      fontSize: '13px',
+                    }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="Your Email"
+                    required
+                    style={{
+                      padding: '12px 16px',
+                      background: isCyber ? '#040b06' : 'rgba(255, 255, 255, 0.04)',
+                      border: style.cardBorder,
+                      borderRadius: style.borderRadiusBtn,
+                      color: style.textPrimary,
+                      outline: 'none',
+                      fontFamily: style.fontFamily,
+                      fontSize: '13px',
+                    }}
+                  />
+                </div>
+                <textarea
+                  value={contactMsg}
+                  onChange={e => setContactMsg(e.target.value)}
+                  placeholder="Your Message or Project Inquiry..."
+                  required
+                  rows={3}
+                  style={{
+                    padding: '12px 16px',
+                    background: isCyber ? '#040b06' : 'rgba(255, 255, 255, 0.04)',
+                    border: style.cardBorder,
+                    borderRadius: style.borderRadiusBtn,
+                    color: style.textPrimary,
+                    outline: 'none',
+                    fontFamily: style.fontFamily,
+                    fontSize: '13px',
+                    resize: 'none',
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: style.borderRadiusBtn,
+                    background: style.buttonBg,
+                    color: style.buttonText,
+                    border: 'none',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: style.fontFamily,
+                    alignSelf: 'flex-start',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Send size={14} />
+                  <span>{isCyber ? 'TRANSMIT_MESSAGE' : 'Send Message'}</span>
+                </button>
+              </form>
+            )}
+          </div>
+        </section>
+
+        {/* ── FOOTER ── */}
+        <footer style={{ borderTop: style.cardBorder, paddingTop: '24px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: style.textMuted }}>
+          <div>© {new Date().getFullYear()} Javier Zam • All Rights Reserved</div>
+          <div>Built with React, TypeScript & Dual Design System Engine</div>
+        </footer>
+
       </div>
     </div>
   )
 }
 
-/* ─── Modern Glass Theme (Right) ──────────────────────── */
-
-function ModernPortfolio() {
-  const s = {
-    bg: 'linear-gradient(135deg, #0f0a1e 0%, #1a1040 40%, #0d1025 100%)',
-    card: 'rgba(255,255,255,0.04)',
-    cardBorder: 'rgba(255,255,255,0.08)',
-    accent: '#a855f7',
-    accentLight: '#c084fc',
-    accentBg: 'rgba(168,85,247,0.12)',
-    accentBorder: 'rgba(168,85,247,0.25)',
-    text: '#ffffff',
-    textSec: 'rgba(255,255,255,0.6)',
-    textMuted: 'rgba(255,255,255,0.35)',
-    font: "'Inter', 'Segoe UI', sans-serif",
-  }
-
-  return (
-    <div style={{
-      position: 'absolute', inset: 0, background: s.bg, color: s.text,
-      fontFamily: s.font, overflow: 'auto',
-    }}>
-      {/* ── Navbar ── */}
-      <div style={{
-        padding: '14px 20px', borderBottom: `1px solid ${s.cardBorder}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(12px)',
-      }}>
-        <span style={{ fontWeight: 700, fontSize: '15px', letterSpacing: '-0.5px' }}>
-          <span style={{ color: s.accentLight }}>&lt;</span>Javier Zam<span style={{ color: s.accentLight }}> /&gt;</span>
-        </span>
-        <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: s.textMuted }}>
-          {['About', 'Exp', 'Projects'].map(l => (
-            <span key={l} style={{ cursor: 'pointer', transition: 'color 0.2s' }}>{l}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Hero ── */}
-      <div style={{ padding: '32px 20px 24px', textAlign: 'center' }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '6px',
-          padding: '5px 14px', borderRadius: '20px',
-          background: s.accentBg, border: `1px solid ${s.accentBorder}`,
-          fontSize: '11px', color: s.accentLight, marginBottom: '14px',
-        }}>
-          <MapPin size={11} /> {portfolio.location}
-        </div>
-        <div style={{ fontSize: '13px', color: s.textMuted, marginBottom: '4px' }}>
-          {portfolio.greeting}
-        </div>
-        <h1 style={{
-          fontSize: '32px', fontWeight: 800, color: s.text, margin: '0 0 6px',
-          letterSpacing: '-1.5px',
-        }}>
-          {portfolio.name}
-        </h1>
-        <p style={{ fontSize: '12px', color: s.textSec, margin: '0 0 14px', letterSpacing: '0.5px' }}>
-          {portfolio.subtitle}
-        </p>
-        <p style={{ fontSize: '12px', color: s.textMuted, margin: '0 0 18px', lineHeight: 1.6, maxWidth: '400px', marginInline: 'auto' }}>
-          {portfolio.bio}
-        </p>
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-          <button style={{
-            padding: '10px 22px', background: `linear-gradient(135deg, #7c3aed, ${s.accent})`,
-            color: '#fff', border: 'none', borderRadius: '10px',
-            fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-            fontFamily: s.font, boxShadow: '0 4px 20px rgba(168,85,247,0.3)',
-          }}>
-            See my work ↓
-          </button>
-          <button style={{
-            padding: '10px 16px', background: s.card, borderRadius: '10px',
-            border: `1px solid ${s.cardBorder}`, color: s.textSec,
-            fontSize: '12px', cursor: 'pointer', fontFamily: s.font,
-            display: 'flex', alignItems: 'center', gap: '6px',
-          }}>
-            <Github size={13} /> GitHub
-          </button>
-          <button style={{
-            padding: '10px 16px', background: s.card, borderRadius: '10px',
-            border: `1px solid ${s.cardBorder}`, color: s.textSec,
-            fontSize: '12px', cursor: 'pointer', fontFamily: s.font,
-            display: 'flex', alignItems: 'center', gap: '6px',
-          }}>
-            <Linkedin size={13} /> LinkedIn
-          </button>
-        </div>
-      </div>
-
-      {/* ── Stats ── */}
-      <div style={{ padding: '0 20px 18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-          {portfolio.stats.map(st => (
-            <div key={st.label} style={{
-              padding: '12px 8px', background: s.card, borderRadius: '12px',
-              border: `1px solid ${s.cardBorder}`, textAlign: 'center',
-              backdropFilter: 'blur(8px)',
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: s.accentLight }}>{st.value}</div>
-              <div style={{ fontSize: '10px', color: s.textMuted, marginTop: '2px' }}>{st.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Skills ── */}
-      <div style={{ padding: '0 20px 18px' }}>
-        <h3 style={{ fontSize: '13px', fontWeight: 700, color: s.textSec, marginBottom: '10px' }}>Skills</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {portfolio.skills.map(sk => (
-            <div key={sk.name} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '11px', color: s.textSec, width: '80px', textAlign: 'right' }}>{sk.name}</span>
-              <div style={{ flex: 1, height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', width: `${sk.level}%`, borderRadius: '4px',
-                  background: `linear-gradient(90deg, #7c3aed, ${s.accentLight})`,
-                  boxShadow: '0 0 8px rgba(168,85,247,0.3)',
-                  transition: 'width 1s ease',
-                }} />
-              </div>
-              <span style={{ fontSize: '10px', color: s.accentLight, width: '28px' }}>{sk.level}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Experience ── */}
-      <div style={{ padding: '0 20px 18px' }}>
-        <h3 style={{ fontSize: '13px', fontWeight: 700, color: s.textSec, marginBottom: '10px' }}>Experience</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {portfolio.experience.map((exp, i) => (
-            <div key={i} style={{
-              padding: '12px 14px', background: s.card, borderRadius: '12px',
-              border: `1px solid ${s.cardBorder}`,
-              display: 'flex', alignItems: 'center', gap: '12px',
-              backdropFilter: 'blur(8px)',
-            }}>
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '8px',
-                background: s.accentBg, border: `1px solid ${s.accentBorder}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: s.accentLight,
-              }}>
-                {exp.type === 'work' ? <Briefcase size={14} /> : <GraduationCap size={14} />}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: s.text }}>{exp.title}</div>
-                <div style={{ fontSize: '10px', color: s.textMuted }}>{exp.company} · {exp.period}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Projects ── */}
-      <div style={{ padding: '0 20px 18px' }}>
-        <h3 style={{ fontSize: '13px', fontWeight: 700, color: s.textSec, marginBottom: '10px' }}>Projects</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {portfolio.projects.map((p, i) => (
-            <div key={i} style={{
-              padding: '14px', background: s.card, borderRadius: '14px',
-              border: `1px solid ${s.cardBorder}`, backdropFilter: 'blur(8px)',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: s.text }}>{p.title}</span>
-                <ExternalLink size={12} color={s.textMuted} style={{ cursor: 'pointer' }} />
-              </div>
-              <p style={{ fontSize: '11px', color: s.textMuted, margin: '0 0 8px', lineHeight: 1.5 }}>{p.desc}</p>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const }}>
-                {p.tags.map(t => (
-                  <span key={t} style={{
-                    padding: '3px 8px', fontSize: '10px', borderRadius: '6px',
-                    background: s.accentBg, border: `1px solid ${s.accentBorder}`,
-                    color: s.accentLight,
-                  }}>{t}</span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Footer ── */}
-      <div style={{
-        padding: '14px 20px', borderTop: `1px solid ${s.cardBorder}`,
-        fontSize: '10px', color: s.textMuted, textAlign: 'center',
-        background: 'rgba(255,255,255,0.02)',
-      }}>
-        Built with mendoan, late-night deploys, and questionable life choices.
-      </div>
-    </div>
-  )
-}
-
-/* ─── Main Slide UI Page ──────────────────────────────── */
+/* ─── FULLSCREEN SLIDER PAGE COMPONENT ───────────────── */
 
 export default function SlideUiPage() {
   const [sliderPos, setSliderPos] = useState(50)
   const isDragging = useRef(false)
-  const containerRef = useRef<HTMLDivElement>(null)
 
+  // Shared Interactive State across BOTH themes
+  const [activeTab, setActiveTab] = useState('Overview')
+  const [projectCategory, setProjectCategory] = useState('All')
+  const [likedProjects, setLikedProjects] = useState<Record<string, boolean>>({})
+  const [contactName, setContactName] = useState('')
+  const [contactMsg, setContactMsg] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  // Terminal State
+  const [terminalCmd, setTerminalCmd] = useState('')
+  const [terminalLogs, setTerminalLogs] = useState<string[]>([
+    '> Initialized Javier Cloud CLI v2.4',
+    '> Connection to GCP Asia-Southeast2 established.',
+    '> Status: Systems Nominal.',
+  ])
+
+  const toggleLike = (title: string) => {
+    setLikedProjects(prev => ({ ...prev, [title]: !prev[title] }))
+  }
+
+  const handleSubmitContact = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!contactName || !contactMsg) return
+    setSubmitted(true)
+    setTimeout(() => {
+      setSubmitted(false)
+      setContactName('')
+      setContactMsg('')
+    }, 4000)
+  }
+
+  const handleTerminalSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const cmd = terminalCmd.trim().toLowerCase()
+    if (!cmd) return
+
+    let response = `Command not recognized: '${cmd}'. Type 'help' for command list.`
+    if (cmd === 'help') {
+      response = 'Available commands: help, skills, deploy, stats, clear'
+    } else if (cmd === 'skills') {
+      response = 'Golang (95%), GCP (92%), React (88%), Docker (86%), Postgres (90%)'
+    } else if (cmd === 'deploy') {
+      response = 'Deploying build to GCP Cloud Run... Done! Status 200 OK.'
+    } else if (cmd === 'stats') {
+      response = 'Repos: 35+ | Cloud Deploys: 150+ | Uptime: 99.9%'
+    } else if (cmd === 'clear') {
+      setTerminalLogs(['> Terminal cleared.'])
+      setTerminalCmd('')
+      return
+    }
+
+    setTerminalLogs(prev => [...prev, `> ${cmd}`, response])
+    setTerminalCmd('')
+  }
+
+  // Mouse / Touch Slider Dragging Logic across 100vw Viewport
   const handleMove = useCallback((clientX: number) => {
-    if (!isDragging.current || !containerRef.current) return
-    const rect = containerRef.current.getBoundingClientRect()
-    const x = clientX - rect.left
-    const pct = Math.max(5, Math.min(95, (x / rect.width) * 100))
+    if (!isDragging.current) return
+    const pct = Math.max(2, Math.min(98, (clientX / window.innerWidth) * 100))
     setSliderPos(pct)
   }, [])
 
   const handleMouseDown = () => { isDragging.current = true }
   const handleMouseUp = () => { isDragging.current = false }
+
   const handleMouseMove = useCallback((e: MouseEvent) => handleMove(e.clientX), [handleMove])
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (e.touches.length > 0) handleMove(e.touches[0].clientX)
@@ -460,126 +803,169 @@ export default function SlideUiPage() {
     }
   }, [handleMouseMove, handleTouchMove])
 
+  const sharedProps: ThemeProps = {
+    activeTab,
+    setActiveTab,
+    projectCategory,
+    setProjectCategory,
+    likedProjects,
+    toggleLike,
+    contactName,
+    setContactName,
+    contactMsg,
+    setContactMsg,
+    submitted,
+    handleSubmitContact,
+    terminalCmd,
+    setTerminalCmd,
+    terminalLogs,
+    handleTerminalSubmit,
+    theme: 'cyberpunk',
+  }
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#050510',
-      fontFamily: "'Inter', sans-serif",
-    }}>
-      {/* Top Bar */}
-      <div style={{
-        padding: '12px 24px',
-        background: 'rgba(255,255,255,0.02)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+    <div
+      style={{
+        position: 'relative',
+        width: '100vw',
+        minHeight: '100vh',
+        backgroundColor: '#05080c',
+        overflowX: 'hidden',
+        userSelect: isDragging.current ? 'none' : 'auto',
+      }}
+    >
+      {/* ── TOP FLOATING CONTROL BAR (Fixed) ── */}
+      <div
+        style={{
+          position: 'fixed',
+          top: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '8px 20px',
+          borderRadius: '30px',
+          background: 'rgba(10, 10, 20, 0.85)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6)',
+        }}
+      >
         <Link
           to="/labs"
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px',
-            fontSize: '13px', color: 'rgba(255,255,255,0.5)', textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: '#a1a1aa',
+            textDecoration: 'none',
+            fontSize: '12px',
+            fontWeight: 600,
           }}
         >
-          <ArrowLeft size={16} /> Back to DevLabs
+          <ArrowLeft size={14} /> Back to Labs
         </Link>
-        <div style={{
-          fontSize: '13px', color: 'rgba(255,255,255,0.4)',
-          fontFamily: "'JetBrains Mono', monospace",
-        }}>
-          slider: {sliderPos.toFixed(0)}%
+
+        <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.15)' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700 }}>
+          <span style={{ color: '#00ff66' }}>Cyberpunk Terminal</span>
+          <span style={{ color: '#71717a', fontSize: '10px' }}>({sliderPos.toFixed(0)}%)</span>
+          <span style={{ color: '#a855f7' }}>Modern Glass</span>
+        </div>
+
+        <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.15)' }} />
+
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {[25, 50, 75].map(preset => (
+            <button
+              key={preset}
+              onClick={() => setSliderPos(preset)}
+              style={{
+                padding: '3px 8px',
+                borderRadius: '12px',
+                background: sliderPos === preset ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#ffffff',
+                fontSize: '10px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {preset}%
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Title */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{ textAlign: 'center', padding: '20px 24px 12px' }}
-      >
-        <h1 style={{
-          fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 800,
-          letterSpacing: '-1px', margin: 0,
-        }}>
-          <span style={{ color: '#39ff14' }}>Retro Terminal</span>
-          <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 12px' }}>⟵ slide ⟶</span>
-          <span style={{ color: '#a855f7' }}>Modern Glass</span>
-        </h1>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>
-          Same portfolio, two completely different design systems — drag to compare
-        </p>
-      </motion.div>
+      {/* ── LAYER 1: Cyberpunk Theme (Base Layer - 100vw) ── */}
+      <UnifiedPortfolioLayout {...sharedProps} theme="cyberpunk" />
 
-      {/* Slider Container */}
+      {/* ── LAYER 2: Modern Theme (Overlay Clipped from Left by sliderPos) ── */}
       <div
-        ref={containerRef}
         style={{
-          position: 'relative',
-          width: 'calc(100% - 32px)', maxWidth: '800px',
-          height: 'calc(100vh - 150px)', maxHeight: '680px',
-          margin: '0 auto', borderRadius: '16px', overflow: 'hidden',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 20px 80px rgba(0,0,0,0.5)',
-          userSelect: 'none',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100%',
+          clipPath: `polygon(${sliderPos}% 0, 100% 0, 100% 100%, ${sliderPos}% 100%)`,
+          pointerEvents: 'auto',
         }}
       >
-        {/* Layer 1: Retro (full, behind) */}
-        <RetroPortfolio />
-
-        {/* Layer 2: Modern (clipped from right) */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          clipPath: `inset(0 0 0 ${sliderPos}%)`,
-        }}>
-          <ModernPortfolio />
-        </div>
-
-        {/* Slider Handle */}
-        <div
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleMouseDown}
-          style={{
-            position: 'absolute', top: 0, bottom: 0,
-            left: `${sliderPos}%`, transform: 'translateX(-50%)',
-            width: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'col-resize', zIndex: 10,
-          }}
-        >
-          {/* Line */}
-          <div style={{
-            position: 'absolute', top: 0, bottom: 0, width: '2px',
-            background: 'linear-gradient(to bottom, #39ff14, #a855f7)',
-            boxShadow: '0 0 12px rgba(168,85,247,0.4), 0 0 4px rgba(57,255,20,0.3)',
-          }} />
-          {/* Grip */}
-          <div style={{
-            width: '34px', height: '52px', borderRadius: '10px',
-            background: 'linear-gradient(135deg, #1a1a24, #0f0a1e)',
-            border: '1px solid rgba(168,85,247,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(168,85,247,0.2)',
-            zIndex: 1,
-          }}>
-            <GripVertical size={16} color="rgba(168,85,247,0.7)" />
-          </div>
-        </div>
-
-        {/* Side labels */}
-        <div style={{
-          position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)',
-          writingMode: 'vertical-rl', fontSize: '10px', fontWeight: 700,
-          letterSpacing: '3px', color: '#39ff1425', fontFamily: "'JetBrains Mono', monospace",
-          pointerEvents: 'none',
-        }}>RETRO</div>
-        <div style={{
-          position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)',
-          writingMode: 'vertical-rl', fontSize: '10px', fontWeight: 700,
-          letterSpacing: '3px', color: 'rgba(168,85,247,0.15)',
-          pointerEvents: 'none',
-        }}>MODERN</div>
+        <UnifiedPortfolioLayout {...sharedProps} theme="modern" />
       </div>
 
-      {/* Blink animation */}
-      <style>{`@keyframes blink { 50% { opacity: 0; } }`}</style>
+      {/* ── FULL-SCREEN VERTICAL SLIDER HANDLE (Fixed 100vh Line) ── */}
+      <div
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleMouseDown}
+        style={{
+          position: 'fixed',
+          top: 0,
+          bottom: 0,
+          left: `${sliderPos}%`,
+          transform: 'translateX(-50%)',
+          width: '40px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'col-resize',
+          zIndex: 90,
+        }}
+      >
+        {/* Glowing Divider Line */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            width: '2px',
+            background: 'linear-gradient(to bottom, #00ff66, #a855f7)',
+            boxShadow: '0 0 15px rgba(0, 255, 102, 0.6), 0 0 15px rgba(168, 85, 247, 0.6)',
+          }}
+        />
+
+        {/* Central Drag Handle Pill */}
+        <div
+          style={{
+            width: '36px',
+            height: '56px',
+            borderRadius: '18px',
+            background: 'linear-gradient(135deg, #0a0a14, #140d24)',
+            border: '1.5px solid rgba(255, 255, 255, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(168, 85, 247, 0.4)',
+            zIndex: 1,
+          }}
+        >
+          <GripVertical size={18} color="#ffffff" />
+        </div>
+      </div>
     </div>
   )
 }
