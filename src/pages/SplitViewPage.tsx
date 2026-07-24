@@ -313,6 +313,29 @@ export default function SplitViewPage() {
     }
   }
 
+  const handleAutoSplitWindows = () => {
+    const halfWidth = Math.floor(window.screen.availWidth / 2)
+    const fullHeight = window.screen.availHeight
+
+    // 1. Position current window on left side
+    try {
+      window.resizeTo(halfWidth, fullHeight)
+      window.moveTo(0, 0)
+    } catch {
+      // Browser permissions may restrict resizing primary window
+    }
+    setTabRole('LEFT')
+
+    // 2. Open 2nd window snapped to right side of screen
+    const rightUrl = `${window.location.origin}/labs/split-view?view=right`
+    window.open(
+      rightUrl,
+      'RightSplitViewWindow',
+      `width=${halfWidth},height=${fullHeight},left=${halfWidth},top=0,resizable=yes,scrollbars=yes`
+    )
+    setLastActionLog('Auto-Split Launched! 2 Windows snapped side-by-side!')
+  }
+
   const handleOpenSecondTab = () => {
     const rightTabUrl = `${window.location.origin}/labs/split-view?view=right`
     window.open(rightTabUrl, '_blank')
@@ -377,13 +400,13 @@ export default function SplitViewPage() {
 
         {/* Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Button to Open Second Tab in Chrome */}
+          {/* Auto-Split Snapped Windows Button */}
           <button
-            onClick={handleOpenSecondTab}
+            onClick={handleAutoSplitWindows}
             style={{
-              padding: '8px 14px',
+              padding: '8px 16px',
               borderRadius: '8px',
-              background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+              background: 'linear-gradient(135deg, #059669, #10b981)',
               border: 'none',
               color: '#ffffff',
               fontSize: '12px',
@@ -392,11 +415,32 @@ export default function SplitViewPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 4px 14px rgba(168, 85, 247, 0.3)',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            <Zap size={14} />
+            <span>⚡ 1-Click Auto-Split Side-by-Side Windows</span>
+          </button>
+
+          {/* Button to Open Second Tab in Chrome */}
+          <button
+            onClick={handleOpenSecondTab}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
           >
             <ExternalLink size={14} />
-            <span>Open 2nd Tab for Chrome Split View (?view=right)</span>
+            <span>Open 2nd Tab (?view=right)</span>
           </button>
 
           {/* Role Indicator & Manual Switch */}
