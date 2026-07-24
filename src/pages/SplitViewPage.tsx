@@ -3,7 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ArrowLeft, Chrome, Radio, Zap, Sparkles, MoveRight, 
-  ExternalLink, Layers, RefreshCw, CheckCircle2, TrendingUp, Info
+  ExternalLink, Layers, RefreshCw, CheckCircle2, TrendingUp, Info,
+  Sliders, Eye, EyeOff
 } from 'lucide-react'
 
 /* ─── Shared Types & Data ─────────────────────────────── */
@@ -72,18 +73,22 @@ const STOCKS: StockItem[] = [
   },
 ]
 
-/* ─── 3D WebGL / Canvas Background Emitter ────────────── */
+/* ─── Smooth & Subtle Ambient Background Emitter ────────── */
 
 function CrossTabCanvas3D({ 
   laserY, 
-  tabRole 
+  tabRole,
+  effectsEnabled
 }: { 
   laserY: number | null; 
-  tabRole: 'LEFT' | 'RIGHT' 
+  tabRole: 'LEFT' | 'RIGHT';
+  effectsEnabled: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const currentLaserYRef = useRef<number | null>(null)
 
   useEffect(() => {
+    if (!effectsEnabled) return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -100,37 +105,37 @@ function CrossTabCanvas3D({
     }
     window.addEventListener('resize', handleResize)
 
-    // 3D Particles
-    const particles = Array.from({ length: 40 }, () => ({
+    // Very Slow & Subtle Ambient Floating Particles (Reduced Speed & Count)
+    const particles = Array.from({ length: 22 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      z: Math.random() * 2 + 0.5,
-      radius: Math.random() * 2 + 1,
-      vx: (Math.random() - 0.5) * 1.5,
-      vy: (Math.random() - 0.5) * 1.5,
-      color: tabRole === 'LEFT' ? 'rgba(0, 255, 102, ' : 'rgba(168, 85, 247, ',
+      z: Math.random() * 1.5 + 0.5,
+      radius: Math.random() * 1.5 + 1,
+      vx: (Math.random() - 0.5) * 0.25, // Slowed down from 1.5 to 0.25
+      vy: (Math.random() - 0.5) * 0.25,
+      color: tabRole === 'LEFT' ? 'rgba(16, 185, 129, ' : 'rgba(139, 92, 246, ',
     }))
 
     const render = () => {
       ctx.clearRect(0, 0, width, height)
 
-      // Perspective Grid Lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)'
+      // Soft Subtle Grid Floor Lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.015)'
       ctx.lineWidth = 1
-      for (let x = 0; x < width; x += 60) {
+      for (let x = 0; x < width; x += 80) {
         ctx.beginPath()
         ctx.moveTo(x, 0)
         ctx.lineTo(x, height)
         ctx.stroke()
       }
-      for (let y = 0; y < height; y += 60) {
+      for (let y = 0; y < height; y += 80) {
         ctx.beginPath()
         ctx.moveTo(0, y)
         ctx.lineTo(width, y)
         ctx.stroke()
       }
 
-      // Draw Particles
+      // Draw Slow Floating Particles
       particles.forEach(p => {
         p.x += p.vx
         p.y += p.vy
@@ -141,36 +146,44 @@ function CrossTabCanvas3D({
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.radius * p.z, 0, Math.PI * 2)
-        ctx.fillStyle = `${p.color}${0.3 * p.z})`
+        ctx.fillStyle = `${p.color}${0.2 * p.z})`
         ctx.fill()
       })
 
-      // Draw Laser Connection Beam
+      // Smooth Linear Interpolation (LERP) for Laser Beam
       if (laserY !== null) {
+        if (currentLaserYRef.current === null) {
+          currentLaserYRef.current = laserY
+        } else {
+          // Soft LERP gliding effect (0.08 speed factor)
+          currentLaserYRef.current += (laserY - currentLaserYRef.current) * 0.08
+        }
+
+        const y = currentLaserYRef.current
         ctx.save()
         const gradient = ctx.createLinearGradient(
-          tabRole === 'LEFT' ? width - 250 : 0,
-          laserY,
-          tabRole === 'LEFT' ? width : 250,
-          laserY
+          tabRole === 'LEFT' ? width - 200 : 0,
+          y,
+          tabRole === 'LEFT' ? width : 200,
+          y
         )
 
         if (tabRole === 'LEFT') {
-          gradient.addColorStop(0, 'rgba(0, 255, 102, 0)')
-          gradient.addColorStop(1, 'rgba(0, 255, 102, 0.9)')
+          gradient.addColorStop(0, 'rgba(16, 185, 129, 0)')
+          gradient.addColorStop(1, 'rgba(16, 185, 129, 0.6)')
         } else {
-          gradient.addColorStop(0, 'rgba(168, 85, 247, 0.9)')
-          gradient.addColorStop(1, 'rgba(168, 85, 247, 0)')
+          gradient.addColorStop(0, 'rgba(139, 92, 246, 0.6)')
+          gradient.addColorStop(1, 'rgba(139, 92, 246, 0)')
         }
 
         ctx.strokeStyle = gradient
-        ctx.lineWidth = 4
-        ctx.shadowBlur = 15
-        ctx.shadowColor = tabRole === 'LEFT' ? '#00ff66' : '#a855f7'
+        ctx.lineWidth = 2
+        ctx.shadowBlur = 8
+        ctx.shadowColor = tabRole === 'LEFT' ? '#10b981' : '#8b5cf6'
 
         ctx.beginPath()
-        ctx.moveTo(tabRole === 'LEFT' ? width - 350 : 0, laserY)
-        ctx.lineTo(tabRole === 'LEFT' ? width : 350, laserY)
+        ctx.moveTo(tabRole === 'LEFT' ? width - 250 : 0, y)
+        ctx.lineTo(tabRole === 'LEFT' ? width : 250, y)
         ctx.stroke()
         ctx.restore()
       }
@@ -184,7 +197,9 @@ function CrossTabCanvas3D({
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', handleResize)
     }
-  }, [laserY, tabRole])
+  }, [laserY, tabRole, effectsEnabled])
+
+  if (!effectsEnabled) return null
 
   return (
     <canvas
@@ -208,8 +223,9 @@ export default function SplitViewPage() {
   const [tabId] = useState(() => Math.random().toString(36).substring(7))
   const [channel, setChannel] = useState<BroadcastChannel | null>(null)
   const [connectedTabsCount, setConnectedTabsCount] = useState(1)
+  const [effectsEnabled, setEffectsEnabled] = useState(true)
   
-  // Tab Role: auto detect or URL param
+  // Tab Role
   const [tabRole, setTabRole] = useState<'LEFT' | 'RIGHT'>(() => {
     if (initialViewParam === 'right') return 'RIGHT'
     return 'LEFT'
@@ -220,7 +236,7 @@ export default function SplitViewPage() {
   const [teleportedCards, setTeleportedCards] = useState<StockItem[]>([])
   const [laserY, setLaserY] = useState<number | null>(null)
   const [activeBeamAnim, setActiveBeamAnim] = useState(false)
-  const [lastActionLog, setLastActionLog] = useState<string>('Ready for Chrome Split View sync')
+  const [lastActionLog, setLastActionLog] = useState<string>('Chrome Split View Ready')
   const [showGuideTooltip, setShowGuideTooltip] = useState(false)
 
   // BroadcastChannel Handshake
@@ -228,7 +244,6 @@ export default function SplitViewPage() {
     const bc = new BroadcastChannel('chrome_split_view_sync')
     setChannel(bc)
 
-    // Handshake: ask if a Left tab exists
     bc.postMessage({ type: 'WHO_IS_LEFT', tabId })
 
     bc.onmessage = (event) => {
@@ -245,11 +260,10 @@ export default function SplitViewPage() {
 
       if (type === 'I_AM_LEFT') {
         setConnectedTabsCount(2)
-        // Auto set new tab as RIGHT if not explicitly set
         if (!initialViewParam) {
           setTabRole('RIGHT')
         }
-        setLastActionLog('Auto-Assigned as RIGHT TAB (3D Stage)')
+        setLastActionLog('Assigned as RIGHT TAB (3D Stage)')
       }
 
       if (type === 'MOUSE_BEAM') {
@@ -265,7 +279,7 @@ export default function SplitViewPage() {
         setTeleportedCards(prev => [payload.stock, ...prev])
         setActiveBeamAnim(true)
         setTimeout(() => setActiveBeamAnim(false), 1500)
-        setLastActionLog(`3D Teleported ${payload.stock.ticker} into Right View!`)
+        setLastActionLog(`Teleported ${payload.stock.ticker} into Right View!`)
       }
 
       if (type === 'CLEAR_TELEPORT') {
@@ -279,8 +293,13 @@ export default function SplitViewPage() {
     }
   }, [tabId, tabRole, initialViewParam])
 
-  // Mouse Move Broadcast
+  // Mouse Move Broadcast (Debounced/Throttled slightly for smooth performance)
+  const lastMouseTime = useRef(0)
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const now = Date.now()
+    if (now - lastMouseTime.current < 25) return // max 40fps event broadcast
+    lastMouseTime.current = now
+
     setLaserY(e.clientY)
     if (channel) {
       channel.postMessage({
@@ -304,11 +323,11 @@ export default function SplitViewPage() {
     }
   }
 
-  // Handle 3D Teleport Card to Right Tab
+  // Handle 3D Teleport Card
   const handleTeleportCard = (stock: StockItem) => {
     setActiveBeamAnim(true)
     setTimeout(() => setActiveBeamAnim(false), 1500)
-    setLastActionLog(`Teleporting 3D Card: ${stock.ticker} ➔ Right Tab`)
+    setLastActionLog(`Teleported: ${stock.ticker} ➔ Right Tab`)
 
     if (channel) {
       channel.postMessage({
@@ -339,16 +358,16 @@ export default function SplitViewPage() {
       style={{
         width: '100vw',
         minHeight: '100vh',
-        backgroundColor: '#05070e',
-        color: '#ffffff',
+        backgroundColor: '#0a0d16',
+        color: '#f4f4f5',
         fontFamily: "'Inter', system-ui, sans-serif",
         position: 'relative',
         overflowX: 'hidden',
         boxSizing: 'border-box',
       }}
     >
-      {/* 3D Canvas Background Beam */}
-      <CrossTabCanvas3D laserY={laserY} tabRole={tabRole} />
+      {/* Smooth Background Emitter */}
+      <CrossTabCanvas3D laserY={laserY} tabRole={tabRole} effectsEnabled={effectsEnabled} />
 
       {/* ── TOP CONTROL BAR ── */}
       <header
@@ -356,7 +375,7 @@ export default function SplitViewPage() {
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          background: 'rgba(9, 13, 22, 0.88)',
+          background: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(16px)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           padding: '12px 24px',
@@ -369,7 +388,7 @@ export default function SplitViewPage() {
           <Link
             to="/labs"
             style={{
-              color: '#a1a1aa',
+              color: '#94a3b8',
               textDecoration: 'none',
               display: 'flex',
               alignItems: 'center',
@@ -380,25 +399,46 @@ export default function SplitViewPage() {
           >
             <ArrowLeft size={16} /> DevLabs
           </Link>
-          <div style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.12)' }} />
+          <div style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.1)' }} />
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Chrome size={18} color="#a855f7" />
-            <span style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.5px' }}>
-              Chrome Native Split View Lab
+            <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.3px', color: '#ffffff' }}>
+              Chrome Native Split View
             </span>
           </div>
         </div>
 
-        {/* Action Controls */}
+        {/* Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Toggle Background FX */}
+          <button
+            onClick={() => setEffectsEnabled(!effectsEnabled)}
+            title="Toggle Ambient Particle & Laser Effects"
+            style={{
+              padding: '6px 10px',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: effectsEnabled ? '#38bdf8' : '#64748b',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            {effectsEnabled ? <Eye size={14} /> : <EyeOff size={14} />}
+            <span>FX {effectsEnabled ? 'ON' : 'OFF'}</span>
+          </button>
+
           {/* Open 2nd Tab Button */}
           <button
             onClick={handleOpenSecondTab}
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
-              background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+              background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
               border: 'none',
               color: '#ffffff',
               fontSize: '12px',
@@ -407,14 +447,14 @@ export default function SplitViewPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 4px 14px rgba(168, 85, 247, 0.3)',
+              boxShadow: '0 4px 14px rgba(139, 92, 246, 0.25)',
             }}
           >
             <ExternalLink size={14} />
-            <span>➕ Open 2nd Tab in Chrome</span>
+            <span>➕ Open 2nd Tab</span>
           </button>
 
-          {/* Role Indicator & Manual Switch */}
+          {/* Role Pill */}
           <div
             style={{
               display: 'flex',
@@ -422,35 +462,20 @@ export default function SplitViewPage() {
               gap: '6px',
               padding: '6px 12px',
               borderRadius: '8px',
-              background: tabRole === 'LEFT' ? 'rgba(0, 255, 102, 0.15)' : 'rgba(168, 85, 247, 0.15)',
-              border: tabRole === 'LEFT' ? '1px solid rgba(0, 255, 102, 0.3)' : '1px solid rgba(168, 85, 247, 0.3)',
+              background: tabRole === 'LEFT' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(139, 92, 246, 0.15)',
+              border: tabRole === 'LEFT' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(139, 92, 246, 0.3)',
               fontSize: '12px',
               fontWeight: 700,
-              color: tabRole === 'LEFT' ? '#00ff66' : '#c084fc',
+              color: tabRole === 'LEFT' ? '#34d399' : '#c084fc',
             }}
           >
             <Radio size={14} />
             <span>{tabRole} TAB</span>
           </div>
-
-          <button
-            onClick={() => setTabRole(r => r === 'LEFT' ? 'RIGHT' : 'LEFT')}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#a1a1aa',
-              fontSize: '11px',
-              cursor: 'pointer',
-            }}
-          >
-            Switch Role
-          </button>
         </div>
       </header>
 
-      {/* ── TOOLTIP GUIDE BANNER ── */}
+      {/* ── TOOLTIP GUIDE ── */}
       <AnimatePresence>
         {showGuideTooltip && (
           <motion.div
@@ -458,9 +483,9 @@ export default function SplitViewPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             style={{
-              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(124, 58, 237, 0.25))',
-              borderBottom: '1px solid #a855f7',
-              padding: '12px 24px',
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.2))',
+              borderBottom: '1px solid rgba(139, 92, 246, 0.4)',
+              padding: '10px 24px',
               fontSize: '13px',
               color: '#ffffff',
               display: 'flex',
@@ -468,13 +493,12 @@ export default function SplitViewPage() {
               justifyContent: 'space-between',
               position: 'relative',
               zIndex: 60,
-              boxShadow: '0 4px 20px rgba(168, 85, 247, 0.3)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Info size={18} color="#c084fc" />
               <span>
-                <strong>Tab 2 Terbuka!</strong> Untuk mengaktifkan Chrome Split View: Klik kanan pada Tab 2 di bagian atas Chrome ➔ Pilih <strong>&quot;Arrange split view&quot;</strong> (atau tekan <code>Win + ➔</code> pada keyboard).
+                <strong>Tab 2 Terbuka!</strong> Klik kanan pada Tab 2 di bagian atas Chrome ➔ Pilih <strong>&quot;Arrange split view&quot;</strong>.
               </span>
             </div>
             <button onClick={() => setShowGuideTooltip(false)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
@@ -484,45 +508,45 @@ export default function SplitViewPage() {
         )}
       </AnimatePresence>
 
-      {/* ── INSTRUCTION BANNER ── */}
+      {/* ── INSTRUCTION BAR ── */}
       <div
         style={{
-          background: tabRole === 'LEFT' ? 'rgba(0, 255, 102, 0.06)' : 'rgba(168, 85, 247, 0.06)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          background: 'rgba(15, 23, 42, 0.5)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
           padding: '10px 24px',
           fontSize: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          color: '#a1a1aa',
+          color: '#94a3b8',
           position: 'relative',
           zIndex: 10,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Zap size={14} color={tabRole === 'LEFT' ? '#00ff66' : '#a855f7'} />
+          <Zap size={14} color={tabRole === 'LEFT' ? '#34d399' : '#c084fc'} />
           <span>
             {tabRole === 'LEFT' ? (
               <span>
-                <strong style={{ color: '#00ff66' }}>LEFT TAB (CONTROLLER):</strong> Select stocks or click <strong>&quot;Beam 3D Card to Right View ➔&quot;</strong> to teleport objects to Right Chrome Tab!
+                <strong style={{ color: '#34d399' }}>LEFT TAB:</strong> Select stocks or click <strong>&quot;Beam Card ➔&quot;</strong> to teleport objects across Chrome tabs!
               </span>
             ) : (
               <span>
-                <strong style={{ color: '#a855f7' }}>RIGHT TAB (3D STAGE):</strong> Receiving live 3D laser telemetry & teleported stock cards from Left Chrome Tab!
+                <strong style={{ color: '#c084fc' }}>RIGHT TAB:</strong> Receiving live 3D laser telemetry & teleported cards from Left Chrome Tab!
               </span>
             )}
           </span>
         </div>
 
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#71717a' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#64748b' }}>
           {lastActionLog}
         </div>
       </div>
 
-      {/* ── MAIN CONTENT ── */}
+      {/* ── MAIN CONTENT (Clean Executive UI) ── */}
       <div
         style={{
-          maxWidth: '1100px',
+          maxWidth: '1050px',
           margin: '0 auto',
           padding: '36px 24px',
           position: 'relative',
@@ -533,48 +557,49 @@ export default function SplitViewPage() {
           /* ─── LEFT TAB VIEW ─── */
           <div>
             <div style={{ marginBottom: '28px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#00ff66', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
-                ⚡ CHROME SPLIT VIEW • CONTROLLER TAB
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#34d399', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
+                CONTROLLER STAGE
               </div>
-              <h1 style={{ fontSize: '32px', fontWeight: 900, margin: '0 0 10px', letterSpacing: '-1px' }}>
+              <h1 style={{ fontSize: '30px', fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.5px', color: '#ffffff' }}>
                 Stock & IPO Prospectus Intelligence
               </h1>
-              <p style={{ fontSize: '14px', color: '#a1a1aa', margin: 0, maxWidth: '650px', lineHeight: 1.6 }}>
-                Click <strong>&quot;➕ Open 2nd Tab in Chrome&quot;</strong> at top-right, then right-click Tab 2 ➔ Arrange Split View. Select stocks or beam 3D cards to see objects teleport across tabs!
+              <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, maxWidth: '650px', lineHeight: 1.6 }}>
+                Click <strong>&quot;➕ Open 2nd Tab&quot;</strong> at top-right, then right-click Tab 2 ➔ Arrange Split View.
               </p>
             </div>
 
-            {/* Stock Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '40px' }}>
+            {/* Stock Cards Grid (Sleek Clean Styling) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '18px', marginBottom: '40px' }}>
               {STOCKS.map(stock => {
                 const isSelected = selectedStock.ticker === stock.ticker
                 return (
                   <motion.div
                     key={stock.ticker}
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ y: -2 }}
                     onClick={() => handleSelectStock(stock)}
                     style={{
-                      padding: '22px',
-                      borderRadius: '16px',
-                      background: isSelected ? 'rgba(0, 255, 102, 0.06)' : 'rgba(255, 255, 255, 0.03)',
-                      border: isSelected ? '1.5px solid #00ff66' : '1px solid rgba(255, 255, 255, 0.08)',
+                      padding: '20px',
+                      borderRadius: '14px',
+                      background: 'rgba(15, 23, 42, 0.6)',
+                      backdropFilter: 'blur(8px)',
+                      border: isSelected ? '1.5px solid #10b981' : '1px solid rgba(255, 255, 255, 0.08)',
                       cursor: 'pointer',
-                      boxShadow: isSelected ? '0 0 30px rgba(0, 255, 102, 0.15)' : 'none',
+                      boxShadow: isSelected ? '0 4px 20px rgba(16, 185, 129, 0.15)' : '0 2px 10px rgba(0,0,0,0.2)',
                       transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                       <div>
-                        <div style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>{stock.ticker}</div>
-                        <div style={{ fontSize: '12px', color: '#71717a' }}>{stock.name}</div>
+                        <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>{stock.ticker}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>{stock.name}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>{stock.price}</div>
+                        <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>{stock.price}</div>
                         <div style={{ fontSize: '12px', fontWeight: 700, color: stock.isUp ? '#34d399' : '#f87171' }}>{stock.change}</div>
                       </div>
                     </div>
 
-                    <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '16px', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px', lineHeight: 1.5 }}>
                       <div>P/E: <strong>{stock.pe}</strong> • Cap: <strong>{stock.marketCap}</strong></div>
                       <div>Broker Flow: <strong>{stock.broker}</strong></div>
                     </div>
@@ -586,8 +611,8 @@ export default function SplitViewPage() {
                       }}
                       style={{
                         width: '100%',
-                        padding: '10px',
-                        borderRadius: '10px',
+                        padding: '9px',
+                        borderRadius: '8px',
                         background: 'linear-gradient(135deg, #059669, #10b981)',
                         border: 'none',
                         color: '#ffffff',
@@ -597,11 +622,11 @@ export default function SplitViewPage() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                        gap: '6px',
+                        boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)',
                       }}
                     >
-                      <span>Beam 3D Card to Right View</span>
+                      <span>Beam Card to Right View</span>
                       <MoveRight size={14} />
                     </button>
                   </motion.div>
@@ -609,34 +634,33 @@ export default function SplitViewPage() {
               })}
             </div>
 
-            {/* Beam Animation Pop */}
+            {/* Notification Pop */}
             <AnimatePresence>
               {activeBeamAnim && (
                 <motion.div
-                  initial={{ opacity: 0, x: -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 100 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
                   style={{
                     position: 'fixed',
-                    bottom: '30px',
-                    right: '30px',
-                    padding: '14px 24px',
-                    borderRadius: '16px',
-                    background: 'rgba(0, 255, 102, 0.2)',
+                    bottom: '24px',
+                    right: '24px',
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    background: 'rgba(16, 185, 129, 0.15)',
                     backdropFilter: 'blur(16px)',
-                    border: '1px solid #00ff66',
-                    boxShadow: '0 0 40px rgba(0, 255, 102, 0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    color: '#00ff66',
-                    fontWeight: 700,
+                    border: '1px solid #10b981',
+                    color: '#34d399',
+                    fontWeight: 600,
                     fontSize: '13px',
                     zIndex: 100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
                   }}
                 >
-                  <Sparkles className="animate-spin" size={18} />
-                  <span>3D Energy Beam Dispatched ➔ Teleporting into Right Chrome Tab!</span>
+                  <Sparkles size={16} />
+                  <span>3D Card Beam Transmitted ➔ Right Tab</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -646,14 +670,14 @@ export default function SplitViewPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
               <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#a855f7', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
-                  🔮 CHROME SPLIT VIEW • 3D HOLOGRAPHIC RECEIVER
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#c084fc', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
+                  RECEIVER STAGE
                 </div>
-                <h1 style={{ fontSize: '32px', fontWeight: 900, margin: '0 0 10px', letterSpacing: '-1px' }}>
-                  Live 3D Telemetry & Asset Receptor
+                <h1 style={{ fontSize: '30px', fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.5px', color: '#ffffff' }}>
+                  Live Telemetry & Asset Receptor
                 </h1>
-                <p style={{ fontSize: '14px', color: '#a1a1aa', margin: 0, maxWidth: '600px', lineHeight: 1.6 }}>
-                  Receiving real-time 3D laser beams and teleported stock cards from Left Chrome Tab!
+                <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, maxWidth: '600px', lineHeight: 1.6 }}>
+                  Receiving real-time data streams & teleported stock cards from Left Chrome Tab.
                 </p>
               </div>
 
@@ -665,12 +689,12 @@ export default function SplitViewPage() {
                     borderRadius: '8px',
                     background: 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: '#a1a1aa',
+                    color: '#94a3b8',
                     fontSize: '12px',
                     cursor: 'pointer',
                   }}
                 >
-                  Clear Teleported Cards
+                  Clear Queue
                 </button>
               )}
             </div>
@@ -678,85 +702,83 @@ export default function SplitViewPage() {
             {/* Selected Stock Live Inspection */}
             <div
               style={{
-                padding: '28px',
-                borderRadius: '24px',
-                background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(124, 58, 237, 0.03))',
-                border: '1.5px solid rgba(168, 85, 247, 0.3)',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(168, 85, 247, 0.15)',
-                marginBottom: '36px',
+                padding: '24px',
+                borderRadius: '16px',
+                background: 'rgba(15, 23, 42, 0.6)',
+                backdropFilter: 'blur(12px)',
+                border: '1.5px solid rgba(139, 92, 246, 0.3)',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                marginBottom: '32px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: '#a855f7', fontWeight: 700, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '11px', color: '#c084fc', fontWeight: 700, marginBottom: '2px' }}>
                     REAL-TIME SYNCED ASSET
                   </div>
-                  <div style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff' }}>{selectedStock.ticker}</div>
-                  <div style={{ fontSize: '13px', color: '#a1a1aa' }}>{selectedStock.name}</div>
+                  <div style={{ fontSize: '26px', fontWeight: 800, color: '#ffffff' }}>{selectedStock.ticker}</div>
+                  <div style={{ fontSize: '13px', color: '#64748b' }}>{selectedStock.name}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff' }}>{selectedStock.price}</div>
+                  <div style={{ fontSize: '26px', fontWeight: 800, color: '#ffffff' }}>{selectedStock.price}</div>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: selectedStock.isUp ? '#34d399' : '#f87171' }}>{selectedStock.change}</div>
                 </div>
               </div>
 
-              {/* AI Prospectus Report */}
-              <div style={{ padding: '14px 16px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '20px' }}>
+              {/* AI Prospectus Summary */}
+              <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', marginBottom: '18px' }}>
                 <div style={{ fontSize: '12px', color: '#c084fc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                  <Sparkles size={15} />
+                  <Sparkles size={14} />
                   <span>AI Valuation & Broker Summary</span>
                 </div>
-                <div style={{ fontSize: '13px', color: '#e4e4e7', lineHeight: 1.5 }}>
+                <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
                   {selectedStock.aiSignal} • Broker Flow: <strong>{selectedStock.broker}</strong>. Valuation P/E: {selectedStock.pe} • Cap: {selectedStock.marketCap}.
                 </div>
               </div>
 
-              {/* 3D Telemetry Visualizer Bars */}
-              <div style={{ fontSize: '11px', color: '#71717a', marginBottom: '8px' }}>3D Momentum Telemetry</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '90px' }}>
+              {/* Momentum Bars */}
+              <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Momentum Telemetry</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '80px' }}>
                 {[35, 45, 60, 52, 78, 85, 92, 100].map((val, idx) => (
                   <div
                     key={idx}
                     style={{
                       flex: 1,
                       height: `${val}%`,
-                      background: 'linear-gradient(to top, #7c3aed, #c084fc)',
-                      borderRadius: '6px 6px 0 0',
-                      boxShadow: '0 0 15px rgba(168, 85, 247, 0.4)',
+                      background: 'linear-gradient(to top, #7c3aed, #a78bfa)',
+                      borderRadius: '4px 4px 0 0',
                     }}
                   />
                 ))}
               </div>
             </div>
 
-            {/* Teleported 3D Cards Queue */}
+            {/* Teleported Cards Queue */}
             {teleportedCards.length > 0 && (
               <div>
-                <h3 style={{ fontSize: '17px', fontWeight: 800, margin: '0 0 14px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Layers size={18} color="#a855f7" />
-                  <span>Teleported 3D Asset Queue ({teleportedCards.length})</span>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 14px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Layers size={16} color="#c084fc" />
+                  <span>Teleported Assets ({teleportedCards.length})</span>
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
                   {teleportedCards.map((card, idx) => (
                     <motion.div
                       key={idx}
-                      initial={{ opacity: 0, x: -100, rotateY: 90 }}
-                      animate={{ opacity: 1, x: 0, rotateY: 0 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
                       style={{
-                        padding: '18px',
-                        borderRadius: '16px',
-                        background: 'rgba(168, 85, 247, 0.1)',
-                        border: '1px solid rgba(168, 85, 247, 0.3)',
-                        boxShadow: '0 10px 30px rgba(168, 85, 247, 0.2)',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        background: 'rgba(139, 92, 246, 0.1)',
+                        border: '1px solid rgba(139, 92, 246, 0.25)',
                       }}
                     >
-                      <div style={{ fontSize: '11px', color: '#c084fc', fontWeight: 700, marginBottom: '4px' }}>
+                      <div style={{ fontSize: '10px', color: '#c084fc', fontWeight: 700, marginBottom: '2px' }}>
                         ✦ TELEPORTED FROM LEFT TAB
                       </div>
                       <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>{card.ticker}</div>
-                      <div style={{ fontSize: '12px', color: '#a1a1aa' }}>{card.name} — {card.price}</div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>{card.name} — {card.price}</div>
                     </motion.div>
                   ))}
                 </div>
