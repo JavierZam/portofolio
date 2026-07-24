@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  ArrowLeft, Chrome, Radio, Zap, Sparkles, Send, MoveRight, 
-  TrendingUp, BarChart2, Cpu, CheckCircle2, RefreshCw, Shield, Layers, Eye
+  ArrowLeft, Chrome, Radio, Zap, Sparkles, MoveRight, 
+  ExternalLink, Layers, RefreshCw, CheckCircle2, TrendingUp
 } from 'lucide-react'
 
 /* ─── Shared Types & Data ─────────────────────────────── */
@@ -101,7 +101,7 @@ function CrossTabCanvas3D({
     window.addEventListener('resize', handleResize)
 
     // 3D Particles
-    const particles = Array.from({ length: 45 }, () => ({
+    const particles = Array.from({ length: 40 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
       z: Math.random() * 2 + 0.5,
@@ -114,7 +114,7 @@ function CrossTabCanvas3D({
     const render = () => {
       ctx.clearRect(0, 0, width, height)
 
-      // Draw Grid Lines (Perspective 3D floor)
+      // Perspective Grid Lines
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)'
       ctx.lineWidth = 1
       for (let x = 0; x < width; x += 60) {
@@ -130,7 +130,7 @@ function CrossTabCanvas3D({
         ctx.stroke()
       }
 
-      // Draw 3D Particles
+      // Draw Particles
       particles.forEach(p => {
         p.x += p.vx
         p.y += p.vy
@@ -145,13 +145,13 @@ function CrossTabCanvas3D({
         ctx.fill()
       })
 
-      // Draw Cross-Tab Laser Beam Connection if mouse is active
+      // Draw Laser Connection Beam
       if (laserY !== null) {
         ctx.save()
         const gradient = ctx.createLinearGradient(
-          tabRole === 'LEFT' ? width - 200 : 0,
+          tabRole === 'LEFT' ? width - 250 : 0,
           laserY,
-          tabRole === 'LEFT' ? width : 200,
+          tabRole === 'LEFT' ? width : 250,
           laserY
         )
 
@@ -169,8 +169,8 @@ function CrossTabCanvas3D({
         ctx.shadowColor = tabRole === 'LEFT' ? '#00ff66' : '#a855f7'
 
         ctx.beginPath()
-        ctx.moveTo(tabRole === 'LEFT' ? width - 300 : 0, laserY)
-        ctx.lineTo(tabRole === 'LEFT' ? width : 300, laserY)
+        ctx.moveTo(tabRole === 'LEFT' ? width - 350 : 0, laserY)
+        ctx.lineTo(tabRole === 'LEFT' ? width : 350, laserY)
         ctx.stroke()
         ctx.restore()
       }
@@ -202,25 +202,33 @@ function CrossTabCanvas3D({
 /* ─── MAIN PAGE COMPONENT ─────────────────────────────── */
 
 export default function SplitViewPage() {
+  const [searchParams] = useSearchParams()
+  const initialViewParam = searchParams.get('view') // 'left' or 'right'
+
   const [tabId] = useState(() => Math.random().toString(36).substring(7))
   const [channel, setChannel] = useState<BroadcastChannel | null>(null)
   const [connectedTabsCount, setConnectedTabsCount] = useState(1)
-  const [tabRole, setTabRole] = useState<'LEFT' | 'RIGHT'>('LEFT')
+  
+  // Tab Role: default to URL param if set, otherwise LEFT
+  const [tabRole, setTabRole] = useState<'LEFT' | 'RIGHT'>(() => {
+    if (initialViewParam === 'right') return 'RIGHT'
+    return 'LEFT'
+  })
 
-  // Shared Cross-Tab Sync States
+  // Shared Sync States
   const [selectedStock, setSelectedStock] = useState<StockItem>(STOCKS[0])
   const [teleportedCards, setTeleportedCards] = useState<StockItem[]>([])
   const [laserY, setLaserY] = useState<number | null>(null)
   const [activeBeamAnim, setActiveBeamAnim] = useState(false)
   const [lastActionLog, setLastActionLog] = useState<string>('Ready for Chrome Split View sync')
 
-  // Initialize BroadcastChannel for Chrome Multi-Tab / Split View Sync
+  // BroadcastChannel Initialization
   useEffect(() => {
     const bc = new BroadcastChannel('chrome_split_view_sync')
     setChannel(bc)
 
-    // Register this tab
-    bc.postMessage({ type: 'TAB_JOINED', tabId })
+    // Notify tab join
+    bc.postMessage({ type: 'TAB_JOINED', tabId, requestedRole: initialViewParam })
 
     bc.onmessage = (event) => {
       const { type, senderId, payload } = event.data
@@ -228,15 +236,7 @@ export default function SplitViewPage() {
 
       if (type === 'TAB_JOINED') {
         setConnectedTabsCount(2)
-        // Auto assign roles: older tab is LEFT, new tab is RIGHT
-        bc.postMessage({ type: 'ROLE_ASSIGN', senderId: tabId, payload: { role: 'RIGHT', forTab: payload?.tabId } })
-        setTabRole('LEFT')
-        setLastActionLog('Chrome Split View connected! (2 Tabs active)')
-      }
-
-      if (type === 'ROLE_ASSIGN' && payload?.forTab === tabId) {
-        setTabRole(payload.role)
-        setConnectedTabsCount(2)
+        setLastActionLog('Chrome Split View connected! (2 Tabs Sync Active)')
       }
 
       if (type === 'MOUSE_BEAM') {
@@ -264,7 +264,7 @@ export default function SplitViewPage() {
       bc.postMessage({ type: 'TAB_LEFT', tabId })
       bc.close()
     }
-  }, [tabId])
+  }, [tabId, initialViewParam])
 
   // Mouse Move Broadcast
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -313,6 +313,11 @@ export default function SplitViewPage() {
     }
   }
 
+  const handleOpenSecondTab = () => {
+    const rightTabUrl = `${window.location.origin}/labs/split-view?view=right`
+    window.open(rightTabUrl, '_blank')
+  }
+
   return (
     <div
       onMouseMove={handleMouseMove}
@@ -330,13 +335,13 @@ export default function SplitViewPage() {
       {/* 3D Canvas Background Beam */}
       <CrossTabCanvas3D laserY={laserY} tabRole={tabRole} />
 
-      {/* ── TOP HEADER CONTROL BAR ── */}
+      {/* ── TOP CONTROL BAR ── */}
       <header
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          background: 'rgba(9, 13, 22, 0.85)',
+          background: 'rgba(9, 13, 22, 0.88)',
           backdropFilter: 'blur(16px)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           padding: '12px 24px',
@@ -365,58 +370,75 @@ export default function SplitViewPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Chrome size={18} color="#a855f7" />
             <span style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.5px' }}>
-              Chrome Split View Dual-Tab Sync
+              Chrome Native Split View Lab
             </span>
           </div>
         </div>
 
-        {/* Multi-Tab Connection Status Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Action Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Button to Open Second Tab in Chrome */}
+          <button
+            onClick={handleOpenSecondTab}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+              border: 'none',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 14px rgba(168, 85, 247, 0.3)',
+            }}
+          >
+            <ExternalLink size={14} />
+            <span>Open 2nd Tab for Chrome Split View (?view=right)</span>
+          </button>
+
+          {/* Role Indicator & Manual Switch */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              background: connectedTabsCount > 1 ? 'rgba(0, 255, 102, 0.1)' : 'rgba(234, 179, 8, 0.1)',
-              border: connectedTabsCount > 1 ? '1px solid rgba(0, 255, 102, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              background: tabRole === 'LEFT' ? 'rgba(0, 255, 102, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+              border: tabRole === 'LEFT' ? '1px solid rgba(0, 255, 102, 0.3)' : '1px solid rgba(168, 85, 247, 0.3)',
               fontSize: '12px',
               fontWeight: 700,
-              color: connectedTabsCount > 1 ? '#00ff66' : '#eab308',
+              color: tabRole === 'LEFT' ? '#00ff66' : '#c084fc',
             }}
           >
-            <Radio size={14} className={connectedTabsCount > 1 ? 'animate-pulse' : ''} />
-            <span>
-              {connectedTabsCount > 1 
-                ? `Chrome Split Active (${tabRole} TAB)` 
-                : 'Single Tab (Open Chrome Split View to Sync)'}
-            </span>
+            <Radio size={14} />
+            <span>Mode: {tabRole} TAB</span>
           </div>
 
-          {/* Role Toggle Button */}
           <button
             onClick={() => setTabRole(r => r === 'LEFT' ? 'RIGHT' : 'LEFT')}
             style={{
-              padding: '6px 12px',
+              padding: '6px 10px',
               borderRadius: '8px',
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#ffffff',
+              color: '#a1a1aa',
               fontSize: '11px',
-              fontWeight: 600,
               cursor: 'pointer',
             }}
           >
-            Switch Role: {tabRole}
+            Switch to {tabRole === 'LEFT' ? 'RIGHT' : 'LEFT'}
           </button>
         </div>
       </header>
 
-      {/* ── INSTRUCTION / ANNOUNCEMENT BANNER ── */}
+      {/* ── INSTRUCTION BANNER ── */}
       <div
         style={{
-          background: tabRole === 'LEFT' ? 'rgba(0, 255, 102, 0.05)' : 'rgba(168, 85, 247, 0.05)',
+          background: tabRole === 'LEFT' ? 'rgba(0, 255, 102, 0.06)' : 'rgba(168, 85, 247, 0.06)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
           padding: '10px 24px',
           fontSize: '12px',
@@ -433,11 +455,11 @@ export default function SplitViewPage() {
           <span>
             {tabRole === 'LEFT' ? (
               <span>
-                <strong style={{ color: '#00ff66' }}>LEFT TAB (CONTROLLER):</strong> Select stocks or click <strong>&quot;Beam 3D Card to Right View ➔&quot;</strong> to teleport objects across Chrome tabs!
+                <strong style={{ color: '#00ff66' }}>LEFT TAB (CONTROLLER):</strong> Select stocks or click <strong>&quot;Beam 3D Card to Right View ➔&quot;</strong> to teleport objects to Right Chrome Tab!
               </span>
             ) : (
               <span>
-                <strong style={{ color: '#a855f7' }}>RIGHT TAB (3D STAGE):</strong> Receiving real-time 3D telemetry, laser beam & teleported cards from Left Tab!
+                <strong style={{ color: '#a855f7' }}>RIGHT TAB (3D STAGE):</strong> Receiving live 3D laser telemetry & teleported stock cards from Left Chrome Tab!
               </span>
             )}
           </span>
@@ -448,33 +470,32 @@ export default function SplitViewPage() {
         </div>
       </div>
 
-      {/* ── MAIN CONTENT AREA ── */}
+      {/* ── MAIN CONTENT ── */}
       <div
         style={{
           maxWidth: '1100px',
           margin: '0 auto',
-          padding: '40px 24px',
+          padding: '36px 24px',
           position: 'relative',
           zIndex: 10,
         }}
       >
-        {/* Render Tab Role Specific View */}
         {tabRole === 'LEFT' ? (
-          /* ─── LEFT TAB VIEW: Controller & Emitter ─── */
+          /* ─── LEFT TAB VIEW ─── */
           <div>
-            <div style={{ marginBottom: '32px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#00ff66', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px', fontFamily: "'JetBrains Mono', monospace" }}>
-                ⚡ CHROME SPLIT VIEW • CONTROLLER STAGE
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#00ff66', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
+                ⚡ CHROME SPLIT VIEW • CONTROLLER TAB
               </div>
-              <h1 style={{ fontSize: '36px', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-1px' }}>
-                Select & Beam 3D Assets Across Chrome Tabs
+              <h1 style={{ fontSize: '32px', fontWeight: 900, margin: '0 0 10px', letterSpacing: '-1px' }}>
+                Stock & IPO Prospectus Intelligence
               </h1>
               <p style={{ fontSize: '14px', color: '#a1a1aa', margin: 0, maxWidth: '650px', lineHeight: 1.6 }}>
-                Open this exact URL in Chrome&apos;s native Split View (Right Tab). Whatever you click or drag here will trigger 3D teleportation and live sync on the right screen!
+                Click <strong>&quot;Open 2nd Tab&quot;</strong> at top-right, then drag it into Chrome&apos;s native Split View! Select stocks or beam 3D cards to see objects teleport across tabs!
               </p>
             </div>
 
-            {/* Stock Cards Grid */}
+            {/* Stock Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '40px' }}>
               {STOCKS.map(stock => {
                 const isSelected = selectedStock.ticker === stock.ticker
@@ -484,7 +505,7 @@ export default function SplitViewPage() {
                     whileHover={{ scale: 1.02 }}
                     onClick={() => handleSelectStock(stock)}
                     style={{
-                      padding: '24px',
+                      padding: '22px',
                       borderRadius: '16px',
                       background: isSelected ? 'rgba(0, 255, 102, 0.06)' : 'rgba(255, 255, 255, 0.03)',
                       border: isSelected ? '1.5px solid #00ff66' : '1px solid rgba(255, 255, 255, 0.08)',
@@ -506,7 +527,7 @@ export default function SplitViewPage() {
 
                     <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '16px', lineHeight: 1.5 }}>
                       <div>P/E: <strong>{stock.pe}</strong> • Cap: <strong>{stock.marketCap}</strong></div>
-                      <div>Broker: <strong>{stock.broker}</strong></div>
+                      <div>Broker Flow: <strong>{stock.broker}</strong></div>
                     </div>
 
                     <button
@@ -539,7 +560,7 @@ export default function SplitViewPage() {
               })}
             </div>
 
-            {/* Active Beam Laser Animation Alert */}
+            {/* Beam Animation Pop */}
             <AnimatePresence>
               {activeBeamAnim && (
                 <motion.div
@@ -561,29 +582,29 @@ export default function SplitViewPage() {
                     gap: '12px',
                     color: '#00ff66',
                     fontWeight: 700,
-                    fontSize: '14px',
+                    fontSize: '13px',
                     zIndex: 100,
                   }}
                 >
-                  <Sparkles className="animate-spin" size={20} />
-                  <span>3D Energy Beam Dispatched ➔ Emerging on Right Chrome Tab!</span>
+                  <Sparkles className="animate-spin" size={18} />
+                  <span>3D Energy Beam Dispatched ➔ Teleporting into Right Chrome Tab!</span>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         ) : (
-          /* ─── RIGHT TAB VIEW: 3D Holographic Stage ─── */
+          /* ─── RIGHT TAB VIEW ─── */
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
               <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#a855f7', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px', fontFamily: "'JetBrains Mono', monospace" }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#a855f7', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
                   🔮 CHROME SPLIT VIEW • 3D HOLOGRAPHIC RECEIVER
                 </div>
-                <h1 style={{ fontSize: '36px', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-1px' }}>
+                <h1 style={{ fontSize: '32px', fontWeight: 900, margin: '0 0 10px', letterSpacing: '-1px' }}>
                   Live 3D Telemetry & Asset Receptor
                 </h1>
                 <p style={{ fontSize: '14px', color: '#a1a1aa', margin: 0, maxWidth: '600px', lineHeight: 1.6 }}>
-                  Receiving real-time 3D data streams from the Left Chrome Tab! Any stock selected or beamed will materialize here with 3D animation.
+                  Receiving real-time 3D laser beams and teleported stock cards from Left Chrome Tab!
                 </p>
               </div>
 
@@ -605,45 +626,45 @@ export default function SplitViewPage() {
               )}
             </div>
 
-            {/* Selected Stock Live 3D Holographic Inspection Card */}
+            {/* Selected Stock Live Inspection */}
             <div
               style={{
-                padding: '32px',
+                padding: '28px',
                 borderRadius: '24px',
                 background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(124, 58, 237, 0.03))',
                 border: '1.5px solid rgba(168, 85, 247, 0.3)',
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(168, 85, 247, 0.15)',
-                marginBottom: '40px',
+                marginBottom: '36px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
                 <div>
-                  <div style={{ fontSize: '12px', color: '#a855f7', fontWeight: 700, marginBottom: '4px' }}>
+                  <div style={{ fontSize: '11px', color: '#a855f7', fontWeight: 700, marginBottom: '4px' }}>
                     REAL-TIME SYNCED ASSET
                   </div>
-                  <div style={{ fontSize: '32px', fontWeight: 900, color: '#ffffff' }}>{selectedStock.ticker}</div>
-                  <div style={{ fontSize: '14px', color: '#a1a1aa' }}>{selectedStock.name}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff' }}>{selectedStock.ticker}</div>
+                  <div style={{ fontSize: '13px', color: '#a1a1aa' }}>{selectedStock.name}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '32px', fontWeight: 900, color: '#ffffff' }}>{selectedStock.price}</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: selectedStock.isUp ? '#34d399' : '#f87171' }}>{selectedStock.change}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff' }}>{selectedStock.price}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: selectedStock.isUp ? '#34d399' : '#f87171' }}>{selectedStock.change}</div>
                 </div>
               </div>
 
               {/* AI Prospectus Report */}
-              <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '24px' }}>
-                <div style={{ fontSize: '12px', color: '#c084fc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <Sparkles size={16} />
-                  <span>AI Valuation & Broker Prospectus Summary</span>
+              <div style={{ padding: '14px 16px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: '20px' }}>
+                <div style={{ fontSize: '12px', color: '#c084fc', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <Sparkles size={15} />
+                  <span>AI Valuation & Broker Summary</span>
                 </div>
-                <div style={{ fontSize: '13px', color: '#e4e4e7', lineHeight: 1.6 }}>
-                  {selectedStock.aiSignal} • Broker Flow: <strong>{selectedStock.broker}</strong>. Valuation metrics indicate P/E of {selectedStock.pe} with total Market Capitalization of {selectedStock.marketCap}.
+                <div style={{ fontSize: '13px', color: '#e4e4e7', lineHeight: 1.5 }}>
+                  {selectedStock.aiSignal} • Broker Flow: <strong>{selectedStock.broker}</strong>. Valuation P/E: {selectedStock.pe} • Cap: {selectedStock.marketCap}.
                 </div>
               </div>
 
-              {/* 3D Visualizer Bars */}
-              <div style={{ fontSize: '12px', color: '#71717a', marginBottom: '10px' }}>3D Momentum Telemetry</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', height: '100px' }}>
+              {/* 3D Telemetry Visualizer Bars */}
+              <div style={{ fontSize: '11px', color: '#71717a', marginBottom: '8px' }}>3D Momentum Telemetry</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '90px' }}>
                 {[35, 45, 60, 52, 78, 85, 92, 100].map((val, idx) => (
                   <div
                     key={idx}
@@ -659,15 +680,15 @@ export default function SplitViewPage() {
               </div>
             </div>
 
-            {/* Teleported 3D Cards Receive Queue */}
+            {/* Teleported 3D Cards Queue */}
             {teleportedCards.length > 0 && (
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 800, margin: '0 0 14px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Layers size={18} color="#a855f7" />
                   <span>Teleported 3D Asset Queue ({teleportedCards.length})</span>
                 </h3>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
                   {teleportedCards.map((card, idx) => (
                     <motion.div
                       key={idx}
@@ -675,7 +696,7 @@ export default function SplitViewPage() {
                       animate={{ opacity: 1, x: 0, rotateY: 0 }}
                       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                       style={{
-                        padding: '20px',
+                        padding: '18px',
                         borderRadius: '16px',
                         background: 'rgba(168, 85, 247, 0.1)',
                         border: '1px solid rgba(168, 85, 247, 0.3)',
@@ -685,8 +706,8 @@ export default function SplitViewPage() {
                       <div style={{ fontSize: '11px', color: '#c084fc', fontWeight: 700, marginBottom: '4px' }}>
                         ✦ TELEPORTED FROM LEFT TAB
                       </div>
-                      <div style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>{card.ticker}</div>
-                      <div style={{ fontSize: '13px', color: '#a1a1aa' }}>{card.name} — {card.price}</div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>{card.ticker}</div>
+                      <div style={{ fontSize: '12px', color: '#a1a1aa' }}>{card.name} — {card.price}</div>
                     </motion.div>
                   ))}
                 </div>
